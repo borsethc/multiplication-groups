@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChadMath: Groups — Multiplication Learning App
+
+A visual, tactile multiplication learning application built for students mastering their multiplication tables through grouping, dynamic line lengths, and interactive token counting.
+
+## Core Concepts
+
+### 1. Grouping
+In any math fact $A \times B$:
+- **First Multiple ($A$)** = Number of groups (represented by lines)
+- **Second Multiple ($B$)** = Count of tokens per group
+- **Total Product ($A \times B$)** = All counted tokens
+
+### 2. Variable Line Lengths
+Line lengths dynamically scale to match the second multiple:
+- **$2 \times 2$**: Short lines sized for 2 tokens
+- **$7 \times 7$**: Long lines sized for 7 tokens
+- Illustrates capacity and spatial proportionality for young learners.
+
+### 3. Step-by-Step Learning Flow
+1. **Step 1: Add Lines** — Learner adds the exact number of lines (groups) for factor $A$.
+2. **Step 2: Add Tokens** — Learner touches each line or slot to place tokens until full ($B$ tokens per line).
+3. **Step 3: Count & Color** — Learner touches tokens to count them. As each group finishes counting, it lights up in a distinct group color with a harmonic chord and voice narration!
+4. **Step 4: Mastery Celebration** — Full product revealed with celebratory fanfare and confetti.
+
+## Tech Stack
+- **Framework**: Next.js 16 (App Router) + TypeScript
+- **Styling**: Tailwind CSS + Custom Neon Dark Theme (matching ChadMath)
+- **Animation**: Framer Motion
+- **Audio Engine**: Synthesized Web Audio API + Web Speech API (zero external mp3 dependencies)
+- **Effects**: Canvas Confetti
 
 ## Getting Started
-
-First, run the development server:
-
 ```bash
+cd multiplication-groups
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3005](http://localhost:3005) (or default port 3000) in your browser.
