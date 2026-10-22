@@ -1,18 +1,21 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, HelpCircle } from "lucide-react";
+import { Check } from "lucide-react";
 
 interface EquationHeaderProps {
   factorA: number; // Groups (Lines)
   factorB: number; // Tokens per group
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3 | 4 | 5;
   typedAnswer: string;
   isSolved: boolean;
   onOpenHelp: () => void;
   onAnswerChange?: (val: string) => void;
   onSubmitAnswer?: () => void;
   errorMessage?: string | null;
+  isLinesComplete?: boolean;
+  isTokensComplete?: boolean;
+  onHintClick?: (text: string) => void;
 }
 
 export function EquationHeader({
@@ -21,144 +24,154 @@ export function EquationHeader({
   currentStep,
   typedAnswer,
   isSolved,
-  onOpenHelp,
   onAnswerChange,
   onSubmitAnswer,
   errorMessage,
+  isLinesComplete = false,
+  isTokensComplete = false,
 }: EquationHeaderProps) {
   const product = factorA * factorB;
 
+  // Visual status for Factor A and Factor B
+  const factorAGreen = isLinesComplete || isSolved;
+  const factorBGreen = isTokensComplete || isSolved;
+
   return (
-    <div className="w-full flex flex-col items-center shrink-0">
-      <div className="relative w-full max-w-2xl bg-white/[0.03] border border-white/10 rounded-xl px-3 py-1.5 backdrop-blur-xl shadow-md flex flex-col items-center gap-1">
+    <div className="w-full flex flex-col items-center justify-center shrink-0 select-none py-0.5 sm:py-1">
+      {/* MATH FACT ROW: COMPACT & PROMINENT WITH MATH VOCABULARY LABELS */}
+      <div className="flex items-start justify-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 flex-wrap">
         
-        {/* Help button */}
-        <button
-          onClick={onOpenHelp}
-          className="absolute top-1.5 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-[10px] font-semibold border border-white/5 transition-colors"
-          title="Guide"
-        >
-          <HelpCircle className="w-2.5 h-2.5 text-cyan-400" />
-          <span>Guide</span>
-        </button>
-
-        {/* The Equation - Compact & Ultra Crisp */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-          {/* Factor A: Groups */}
-          <div className="flex flex-col items-center">
-            <motion.div
-              animate={{
-                borderColor: currentStep === 1 ? "#06b6d4" : "rgba(255,255,255,0.15)",
-                scale: currentStep === 1 ? [1, 1.04, 1] : 1,
-              }}
-              transition={{ repeat: currentStep === 1 ? Infinity : 0, duration: 2 }}
-              className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg bg-cyan-950/40 border-2 border-cyan-500/40"
-            >
-              <span className="text-xl sm:text-2xl font-black text-cyan-400">
-                {factorA}
-              </span>
-            </motion.div>
-            <span className="text-[9px] uppercase tracking-wider font-bold text-cyan-300/70">
-              Groups
+        {/* Factor 1 Column */}
+        <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+          <motion.div
+            animate={{
+              scale: factorAGreen ? [1, 1.04, 1] : currentStep === 1 ? [1, 1.02, 1] : 1,
+              borderColor: factorAGreen ? "#10b981" : currentStep === 1 ? "#06b6d4" : "rgba(255,255,255,0.15)",
+            }}
+            transition={{ repeat: !factorAGreen && currentStep === 1 ? Infinity : 0, duration: 1.8 }}
+            className={`px-2.5 py-0.5 xs:px-3 xs:py-1 sm:px-4 sm:py-1.5 md:px-5 md:py-2 rounded-xl sm:rounded-2xl border-2 sm:border-3 transition-all duration-300 flex items-center justify-center gap-1 shadow-lg ${
+              factorAGreen
+                ? "bg-emerald-950/70 border-emerald-400 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                : currentStep === 1
+                ? "bg-cyan-950/60 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.4)] ring-2 ring-cyan-500/20"
+                : "bg-white/5 border-white/15 text-white/75"
+            }`}
+          >
+            <span className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter drop-shadow-md">
+              {factorA}
             </span>
-          </div>
+            {factorAGreen && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center ml-0.5 shadow-sm"
+              >
+                <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3.5]" />
+              </motion.div>
+            )}
+          </motion.div>
+          <span className="text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider text-cyan-400/90">
+            Factor 1
+          </span>
+        </div>
 
-          {/* Multiplication Sign */}
-          <span className="text-lg sm:text-xl font-black text-white/40 pb-2">
+        {/* Multiplication Operator */}
+        <div className="flex items-center justify-center pt-1 xs:pt-1.5 sm:pt-2 md:pt-2.5">
+          <span className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-light text-white/40 select-none px-0.5">
             ×
           </span>
+        </div>
 
-          {/* Factor B: Tokens per group */}
-          <div className="flex flex-col items-center">
-            <motion.div
-              animate={{
-                borderColor: currentStep === 2 ? "#a855f7" : "rgba(255,255,255,0.15)",
-                scale: currentStep === 2 ? [1, 1.04, 1] : 1,
-              }}
-              transition={{ repeat: currentStep === 2 ? Infinity : 0, duration: 2 }}
-              className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg bg-purple-950/40 border-2 border-purple-500/40"
-            >
-              <span className="text-xl sm:text-2xl font-black text-purple-400">
-                {factorB}
-              </span>
-            </motion.div>
-            <span className="text-[9px] uppercase tracking-wider font-bold text-purple-300/70">
-              Tokens/Line
+        {/* Factor 2 Column */}
+        <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+          <motion.div
+            animate={{
+              scale: factorBGreen ? [1, 1.04, 1] : currentStep === 2 ? [1, 1.02, 1] : 1,
+              borderColor: factorBGreen ? "#10b981" : currentStep === 2 ? "#a855f7" : "rgba(255,255,255,0.15)",
+            }}
+            transition={{ repeat: !factorBGreen && currentStep === 2 ? Infinity : 0, duration: 1.8 }}
+            className={`px-2.5 py-0.5 xs:px-3 xs:py-1 sm:px-4 sm:py-1.5 md:px-5 md:py-2 rounded-xl sm:rounded-2xl border-2 sm:border-3 transition-all duration-300 flex items-center justify-center gap-1 shadow-lg ${
+              factorBGreen
+                ? "bg-emerald-950/70 border-emerald-400 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                : currentStep === 2
+                ? "bg-purple-950/60 border-purple-400 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.4)] ring-2 ring-purple-500/20"
+                : "bg-white/5 border-white/15 text-white/75"
+            }`}
+          >
+            <span className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter drop-shadow-md">
+              {factorB}
             </span>
-          </div>
+            {factorBGreen && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center ml-0.5 shadow-sm"
+              >
+                <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3.5]" />
+              </motion.div>
+            )}
+          </motion.div>
+          <span className="text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider text-purple-400/90">
+            Factor 2
+          </span>
+        </div>
 
-          {/* Equals Sign */}
-          <span className="text-lg sm:text-xl font-black text-white/40 pb-2">
+        {/* Equals Operator */}
+        <div className="flex items-center justify-center pt-1 xs:pt-1.5 sm:pt-2 md:pt-2.5">
+          <span className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-light text-white/40 select-none px-0.5">
             =
           </span>
-
-          {/* Result / Input Box - Learner Types Here! */}
-          <div className="flex flex-col items-center">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                onSubmitAnswer?.();
-              }}
-              className="flex items-center"
-            >
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={isSolved ? product : typedAnswer}
-                disabled={isSolved}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, "");
-                  onAnswerChange?.(val);
-                }}
-                placeholder="?"
-                className={`w-14 sm:w-16 h-8 sm:h-9 rounded-lg text-center text-lg sm:text-xl font-black transition-all border-2 outline-none ${
-                  isSolved
-                    ? "bg-emerald-950/40 border-emerald-400 text-emerald-400 shadow-md shadow-emerald-500/20"
-                    : errorMessage
-                    ? "bg-rose-950/40 border-rose-500 text-rose-300 animate-shake"
-                    : currentStep === 3
-                    ? "bg-amber-950/30 border-amber-400 text-amber-300 ring-2 ring-amber-400/20"
-                    : "bg-black/40 border-white/15 text-white/70"
-                }`}
-              />
-            </form>
-            <span className="text-[9px] uppercase tracking-wider font-bold text-slate-400">
-              {isSolved ? "Product" : "Type Answer"}
-            </span>
-          </div>
         </div>
 
-        {/* Dynamic Context Guidance */}
-        <div className="text-center">
-          {errorMessage ? (
-            <motion.p
-              initial={{ opacity: 0, y: -2 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-[11px] text-rose-400 font-bold"
-            >
-              {errorMessage}
-            </motion.p>
-          ) : currentStep === 1 ? (
-            <p className="text-[11px] text-cyan-300 font-medium">
-              Look at the 1st factor. Touch below to draw the groups.
-            </p>
-          ) : currentStep === 2 ? (
-            <p className="text-[11px] text-purple-300 font-medium">
-              Look at the 2nd factor. Touch each line to add tokens.
-            </p>
-          ) : currentStep === 3 ? (
-            <p className="text-[11px] text-amber-300 font-medium">
-              Touch tokens to count them, then type your answer!
-            </p>
-          ) : (
-            <p className="text-[11px] text-emerald-300 font-bold flex items-center justify-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-400" />
-              Correct! {factorA} groups of {factorB} = {product}
-            </p>
-          )}
+        {/* Product Column */}
+        <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSubmitAnswer?.();
+            }}
+            className="flex items-center relative"
+          >
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={isSolved ? product : typedAnswer}
+              disabled={isSolved}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "");
+                onAnswerChange?.(val);
+              }}
+              placeholder="?"
+              className={`w-16 h-10 xs:w-18 xs:h-11 sm:w-22 sm:h-13 md:w-26 md:h-15 rounded-xl sm:rounded-2xl text-center text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tight transition-all border-2 sm:border-3 outline-none ${
+                isSolved
+                  ? "bg-emerald-950/70 border-emerald-400 text-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.6)]"
+                  : errorMessage
+                  ? "bg-rose-950/60 border-rose-500 text-rose-300 animate-shake"
+                  : "bg-black/80 border-amber-400 text-amber-300 focus:border-amber-300 ring-2 sm:ring-3 ring-amber-400/25 shadow-[0_0_20px_rgba(245,158,11,0.25)]"
+              }`}
+            />
+
+            {!isSolved && typedAnswer.length === 0 && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping pointer-events-none" />
+            )}
+          </form>
+          <span className="text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-400/90">
+            Product
+          </span>
         </div>
       </div>
+
+      {/* Subtle Error Message (Only when needed) */}
+      {errorMessage && (
+        <motion.p
+          initial={{ opacity: 0, y: -2 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-[11px] sm:text-xs text-rose-400 font-bold text-center mt-1 py-0.5 px-3 bg-rose-950/40 rounded-lg border border-rose-500/30"
+        >
+          {errorMessage}
+        </motion.p>
+      )}
     </div>
   );
 }

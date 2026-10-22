@@ -42,83 +42,72 @@ export function InstructionsModal({ isOpen, onClose }: InstructionsModalProps) {
             <div className="space-y-6 text-sm text-slate-300">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                 <p className="text-base font-semibold text-white mb-2">
-                  Take the fact: <span className="text-cyan-400 font-bold">2</span> × <span className="text-purple-400 font-bold">3</span>
+                  Take the fact: <span className="text-cyan-400 font-bold">2</span> × <span className="text-purple-400 font-bold">3</span> = <span className="text-amber-400 font-bold">6</span>
                 </p>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3">
-                    <span className="text-cyan-400 font-bold text-sm block mb-1">First Number = 2</span>
-                    The <strong className="text-white">number of groups</strong> (lines to draw).
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-2.5">
+                    <span className="text-cyan-400 font-bold text-xs block mb-1">Factor 1 (2)</span>
+                    <strong className="text-white">Groups</strong> (lines to draw).
                   </div>
-                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
-                    <span className="text-purple-400 font-bold text-sm block mb-1">Second Number = 3</span>
-                    The <strong className="text-white">count per group</strong> (tokens per line).
+                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-2.5">
+                    <span className="text-purple-400 font-bold text-xs block mb-1">Factor 2 (3)</span>
+                    <strong className="text-white">Items</strong> on each line.
+                  </div>
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
+                    <span className="text-amber-400 font-bold text-xs block mb-1">Product (6)</span>
+                    <strong className="text-white">Total</strong> answer.
                   </div>
                 </div>
               </div>
 
-              {/* Variable Line Lengths */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 to-purple-950/40 border border-white/10">
-                <h3 className="font-bold text-white text-base mb-1 flex items-center gap-2">
-                  <span>📏 Variable Line Lengths</span>
-                </h3>
-                <p className="text-xs text-slate-300 leading-relaxed mb-3">
-                  Notice how line lengths adapt! A line for <strong>2 tokens</strong> is compact, while a line for <strong>7 tokens</strong> is longer.
-                </p>
-                <div className="space-y-3 bg-black/40 p-3 rounded-xl border border-white/5">
-                  <div>
-                    <div className="text-[11px] text-white/60 mb-1">2 × 2 (Short lines for 2 tokens):</div>
-                    <div className="w-36 h-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-around">
-                      <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
-                      <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-white/60 mb-1">2 × 6 (Longer lines for 6 tokens):</div>
-                    <div className="w-full max-w-xs h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-around">
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} className="w-3 h-3 rounded-full bg-white shadow-sm" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3 Step Flow */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-white text-base">Your 3 Simple Steps:</h3>
+              {/* Step Flow */}
+              <div className="space-y-2.5">
+                <h3 className="font-bold text-white text-base">Mastery Steps:</h3>
                 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                  <div className="w-7 h-7 rounded-full bg-cyan-500 text-black font-black flex items-center justify-center text-sm shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-cyan-500 text-black font-black flex items-center justify-center text-xs shrink-0">
                     1
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">Add the Lines (Groups)</h4>
+                    <h4 className="font-bold text-white text-sm">How Many Groups? (Factor 1)</h4>
                     <p className="text-xs text-slate-400">
-                      Tap "+ Add Line" until you have the exact number of groups specified by the first factor.
+                      Look at Factor 1 to see how many groups you need. Add groups by drawing horizontal lines with your finger!
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                  <div className="w-7 h-7 rounded-full bg-purple-500 text-white font-black flex items-center justify-center text-sm shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-purple-500 text-white font-black flex items-center justify-center text-xs shrink-0">
                     2
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">Add Tokens to Each Line</h4>
+                    <h4 className="font-bold text-white text-sm">Place Items for Factor 2</h4>
                     <p className="text-xs text-slate-400">
-                      Touch each line or empty slot to place tokens until each line has the second multiple.
+                      Tap each line to place the number of items specified by Factor 2.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500 text-black font-black flex items-center justify-center text-sm shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-amber-500 text-black font-black flex items-center justify-center text-xs shrink-0">
                     3
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">Touch to Count & Color Groups</h4>
+                    <h4 className="font-bold text-white text-sm">Spot the Pattern!</h4>
                     <p className="text-xs text-slate-400">
-                      Touch tokens in order. When a full group is counted, the group changes color to reveal the total product!
+                      Notice the repeated addition pattern (e.g. 4 + 4 + 4). Can you find the Product before counting?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500 text-black font-black flex items-center justify-center text-xs shrink-0">
+                    4
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-sm">Count Dots or Enter Product</h4>
+                    <p className="text-xs text-slate-400">
+                      Tap dots to count aloud, or enter the Product directly on the numpad at any time.
                     </p>
                   </div>
                 </div>
@@ -128,7 +117,7 @@ export function InstructionsModal({ isOpen, onClose }: InstructionsModalProps) {
                 onClick={onClose}
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-black text-sm tracking-wide shadow-lg shadow-cyan-500/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
               >
-                Got It! Let&apos;s Build <ArrowRight className="w-4 h-4" />
+                Got It! Let&apos;s Solve <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </motion.div>
