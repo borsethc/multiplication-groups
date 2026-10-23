@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Play, Flame, Trophy, KeyRound, GraduationCap } from "lucide-react";
+import { Play, Flame, Trophy, KeyRound, UserCheck, RefreshCw } from "lucide-react";
 import { StudentProfile } from "@/lib/studentStorage";
 
 interface ChadMathDashboardProps {
@@ -17,9 +17,8 @@ interface ChadMathDashboardProps {
   onToggleMultipleChoice: () => void;
   tableMastery: Record<number, number>; // 2..9 -> 0..1
   onStartPlay: () => void;
-  currentStudent?: StudentProfile;
+  currentStudent?: StudentProfile | null;
   onOpenPinModal?: () => void;
-  onOpenTeacherDashboard?: () => void;
 }
 
 export function ChadMathDashboard({
@@ -36,7 +35,6 @@ export function ChadMathDashboard({
   onStartPlay,
   currentStudent,
   onOpenPinModal,
-  onOpenTeacherDashboard,
 }: ChadMathDashboardProps) {
   // Daily session progress (0 to 5)
   const sessionTarget = 5;
@@ -83,33 +81,26 @@ export function ChadMathDashboard({
         {/* STUDENT PIN PROFILE BAR */}
         {currentStudent && onOpenPinModal && (
           <div className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 shrink-0">
-            <button
-              onClick={onOpenPinModal}
-              className="flex items-center gap-2 text-left cursor-pointer group"
-              title="Click to switch student PIN"
-            >
+            <div className="flex items-center gap-2 text-left">
               <span className="text-xl sm:text-2xl">{currentStudent.avatar}</span>
               <div>
-                <span className="text-xs sm:text-sm font-bold text-white group-hover:text-cyan-300 transition-colors flex items-center gap-1.5">
+                <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
                   {currentStudent.name}
-                  <KeyRound className="w-3 h-3 text-white/40 group-hover:text-cyan-300" />
                 </span>
-                <span className="text-[10px] text-white/40 font-mono">
-                  PIN: <strong className="text-cyan-300">{currentStudent.pin}</strong> • Solved: {currentStudent.totalSolved}
+                <span className="text-[10px] text-white/50 font-medium">
+                  Solved: <strong className="text-cyan-300">{currentStudent.totalSolved}</strong> • Streak: <strong className="text-orange-400">{currentStudent.streak}</strong>
                 </span>
               </div>
-            </button>
+            </div>
 
-            {onOpenTeacherDashboard && (
-              <button
-                onClick={onOpenTeacherDashboard}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[11px] font-bold border border-amber-500/25 transition-colors cursor-pointer"
-                title="Open Teacher Command Center"
-              >
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span>Teacher</span>
-              </button>
-            )}
+            <button
+              onClick={onOpenPinModal}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white text-[11px] font-bold border border-white/10 transition-colors cursor-pointer group"
+              title="Switch learner profile"
+            >
+              <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform" />
+              <span>Switch</span>
+            </button>
           </div>
         )}
 

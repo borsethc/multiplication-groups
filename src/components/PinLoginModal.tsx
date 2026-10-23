@@ -7,11 +7,11 @@ import { StudentProfile, TEACHER_PIN } from "@/lib/studentStorage";
 
 interface PinLoginModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   students: StudentProfile[];
-  currentStudent: StudentProfile;
+  currentStudent?: StudentProfile | null;
   onSelectStudent: (student: StudentProfile) => void;
-  onOpenTeacherDashboard: () => void;
+  canClose?: boolean;
 }
 
 export function PinLoginModal({
@@ -20,7 +20,7 @@ export function PinLoginModal({
   students,
   currentStudent,
   onSelectStudent,
-  onOpenTeacherDashboard,
+  canClose = true,
 }: PinLoginModalProps) {
   const [pin, setPin] = useState<string>("");
   const [selectedStudentForPin, setSelectedStudentForPin] = useState<StudentProfile | null>(null);
@@ -50,21 +50,13 @@ export function PinLoginModal({
   };
 
   const verifyPin = (enteredPin: string) => {
-    // 1. Check for Teacher Portal PIN
-    if (enteredPin === TEACHER_PIN) {
-      setPin("");
-      onClose();
-      onOpenTeacherDashboard();
-      return;
-    }
-
-    // 2. Check student PINs
+    // Check student PINs
     const match = students.find((s) => s.pin === enteredPin);
     if (match) {
       onSelectStudent(match);
       setPin("");
       setSelectedStudentForPin(null);
-      onClose();
+      if (onClose) onClose();
     } else {
       setErrorMessage("Incorrect PIN. Please try again!");
       setTimeout(() => {
@@ -91,14 +83,16 @@ export function PinLoginModal({
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           className="relative w-full max-w-sm sm:max-w-md bg-[#0e1017] border border-white/15 rounded-3xl p-4 sm:p-6 text-white shadow-2xl flex flex-col items-center overflow-hidden"
         >
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {/* Close Button (only if canClose) */}
+          {canClose && onClose && (
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Mode Switch Tabs */}
           <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/5 border border-white/10 mb-3 sm:mb-4">
@@ -228,7 +222,7 @@ export function PinLoginModal({
 
               <div className="w-full max-h-[260px] overflow-y-auto space-y-1.5 pr-1">
                 {students.map((student) => {
-                  const isCurrent = currentStudent.id === student.id;
+                  const isCurrent = currentStudent?.id === student.id;
                   return (
                     <button
                       key={student.id}
@@ -251,7 +245,7 @@ export function PinLoginModal({
                             )}
                           </span>
                           <span className="text-[10px] text-white/40 font-mono">
-                            PIN: {student.pin} • Solved: {student.totalSolved}
+                            Solved: {student.totalSolved} • Streak: {student.streak}
                           </span>
                         </div>
                       </div>
@@ -265,20 +259,6 @@ export function PinLoginModal({
               </div>
             </div>
           )}
-
-          {/* Teacher Portal Link */}
-          <div className="mt-3 pt-2.5 border-t border-white/10 w-full flex items-center justify-center">
-            <button
-              onClick={() => {
-                onClose();
-                onOpenTeacherDashboard();
-              }}
-              className="text-xs text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors cursor-pointer"
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span>Teacher Dashboard (PIN: 9999)</span>
-            </button>
-          </div>
         </motion.div>
       </div>
     </AnimatePresence>

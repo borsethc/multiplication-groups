@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume2, VolumeX, HelpCircle, Flame, ArrowLeft, GraduationCap, KeyRound, User } from "lucide-react";
+import { Volume2, VolumeX, HelpCircle, Flame, ArrowLeft, RefreshCw, User } from "lucide-react";
 import { StudentProfile } from "@/lib/studentStorage";
 
 interface NavbarProps {
@@ -13,9 +13,8 @@ interface NavbarProps {
   onOpenSelector?: () => void;
   onOpenInstructions: () => void;
   onBackToDashboard?: () => void;
-  currentStudent?: StudentProfile;
+  currentStudent?: StudentProfile | null;
   onOpenPinModal?: () => void;
-  onOpenTeacherDashboard?: () => void;
 }
 
 export function Navbar({
@@ -29,7 +28,6 @@ export function Navbar({
   onBackToDashboard,
   currentStudent,
   onOpenPinModal,
-  onOpenTeacherDashboard,
 }: NavbarProps) {
   return (
     <header className="w-full flex items-center justify-between py-1 px-2 sm:py-1.5 sm:px-4 md:px-6 border-b border-white/5 bg-[#08090e]/95 backdrop-blur-3xl sticky top-0 z-40 shrink-0">
@@ -59,21 +57,18 @@ export function Navbar({
         )}
       </div>
 
-      {/* Center: ACTIVE STUDENT PIN BADGE & MAIN MENU */}
+      {/* Center: ACTIVE STUDENT PILL & MAIN MENU */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Active Student Pill with PIN */}
+        {/* Active Student Pill */}
         {currentStudent && onOpenPinModal && (
           <button
             onClick={onOpenPinModal}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all shadow-sm cursor-pointer group"
-            title="Switch student profile with PIN"
+            title="Switch student profile"
           >
             <span className="text-base sm:text-lg">{currentStudent.avatar}</span>
             <span className="font-bold text-xs hidden xs:inline">{currentStudent.name.split(" ")[0]}</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">
-              {currentStudent.pin}
-            </span>
-            <KeyRound className="w-3 h-3 text-white/40 group-hover:text-cyan-300 transition-colors hidden sm:block" />
+            <RefreshCw className="w-3 h-3 text-white/40 group-hover:text-cyan-300 group-hover:rotate-180 transition-all ml-0.5" />
           </button>
         )}
 
@@ -90,20 +85,8 @@ export function Navbar({
         )}
       </div>
 
-      {/* Right: Teacher Portal, Score Counter & Audio Controls */}
+      {/* Right: Score Counter & Audio Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* TEACHER PORTAL BUTTON */}
-        {onOpenTeacherDashboard && (
-          <button
-            onClick={onOpenTeacherDashboard}
-            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs transition-colors cursor-pointer"
-            title="Teacher Dashboard & Progress Analytics"
-          >
-            <GraduationCap className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Teacher</span>
-          </button>
-        )}
-
         {/* Score Counter */}
         <div className="flex flex-col items-end mr-0.5 sm:mr-1">
           <span className="text-[8px] uppercase tracking-widest text-white/40 font-bold hidden xs:block">

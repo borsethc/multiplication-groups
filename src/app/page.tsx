@@ -10,7 +10,6 @@ import { InstructionsModal } from "@/components/InstructionsModal";
 import { FactSelectorModal } from "@/components/FactSelectorModal";
 import { ChadMathDashboard } from "@/components/ChadMathDashboard";
 import { PinLoginModal } from "@/components/PinLoginModal";
-import { TeacherDashboard } from "@/components/TeacherDashboard";
 import {
   StudentProfile,
   loadAllStudents,
@@ -22,13 +21,14 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { RefreshCw, ArrowRight, Wand2 } from "lucide-react";
 
 export default function MultiplicationGroupsApp() {
-  // Main Navigation View: "dashboard" (ChadMath Home), "practice" (Worksheet Scratchpad), or "teacher" (Teacher Analytics)
-  const [currentView, setCurrentView] = useState<"dashboard" | "practice" | "teacher">("dashboard");
+  // Main Navigation View: "dashboard" (ChadMath Home) or "practice" (Worksheet Scratchpad)
+  const [currentView, setCurrentView] = useState<"dashboard" | "practice">("dashboard");
 
   // Classroom & Student Profile PIN State
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [activeStudent, setActiveStudent] = useState<StudentProfile | null>(null);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(true);
 
   // Multi-selectable tables (defaulting to 2, 3, 4)
   const [selectedTables, setSelectedTables] = useState<number[]>([2, 3, 4]);
@@ -94,17 +94,28 @@ export default function MultiplicationGroupsApp() {
 
   const targetProduct = factorA * factorB;
 
-  // Restore persistence and active student profile on mount
+  // Restore persistence and prompt student login on initial visit
   useEffect(() => {
     if (typeof window !== "undefined") {
       const allStudents = loadAllStudents();
       setStudents(allStudents);
-      const current = getActiveStudent();
-      setActiveStudent(current);
-      setScore(current.score);
-      setStreak(current.streak);
-      setDailySessions(current.dailySessions);
-      setTableMastery(current.tableMastery);
+      const sessionPin = sessionStorage.getItem("chadmath_active_login_pin");
+      if (sessionPin) {
+        const found = allStudents.find((s) => s.pin === sessionPin);
+        if (found) {
+          setActiveStudent(found);
+          setScore(found.score);
+          setStreak(found.streak);
+          setDailySessions(found.dailySessions);
+          setTableMastery(found.tableMastery);
+          setIsLoggedIn(true);
+          setIsPinModalOpen(false);
+          return;
+        }
+      }
+      // If no active session login, request student to log in with PIN
+      setIsLoggedIn(false);
+      setIsPinModalOpen(true);
     }
   }, []);
 
@@ -166,7 +177,7 @@ export default function MultiplicationGroupsApp() {
     setSelectedTables([]);
   };
 
-  // Student PIN Switching and Refresh
+  // Student PIN Login and Switching
   const handleSelectStudent = useCallback((student: StudentProfile) => {
     setActiveStudentPin(student.pin);
     setActiveStudent(student);
@@ -174,37 +185,18 @@ export default function MultiplicationGroupsApp() {
     setStreak(student.streak);
     setDailySessions(student.dailySessions);
     setTableMastery(student.tableMastery);
+    setIsLoggedIn(true);
+    setIsPinModalOpen(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("chadmath_active_login_pin", student.pin);
+    }
     const updated = loadAllStudents();
     setStudents(updated);
   }, []);
 
-  const handleRefreshStudents = useCallback(() => {
-    const updated = loadAllStudents();
-    setStudents(updated);
-    const curr = getActiveStudent();
-    setActiveStudent(curr);
-    setScore(curr.score);
-    setStreak(curr.streak);
-    setDailySessions(curr.dailySessions);
-    setTableMastery(curr.tableMastery);
-  }, []);
-
-  const handleOpenTeacherDashboard = () => {
+  const handleOpenPinLogin = () => {
     playHover();
-    setCurrentView("teacher");
-  };
-
-  const handleBackToApp = () => {
-    playHover();
-    setCurrentView("dashboard");
-  };
-
-  const handleSelectStudentToPractice = (student: StudentProfile) => {
-    playHover();
-    handleSelectStudent(student);
-    setCurrentView("practice");
-    const next = getNextFactPair(selectedTables);
-    loadFact(next.a, next.b);
+    setIsPinModalOpen(true);
   };
 
   // Start Practice from Dashboard
@@ -603,16 +595,8 @@ export default function MultiplicationGroupsApp() {
       {/* Confetti celebration */}
       <Confetti trigger={confettiTrigger} />
 
-      {/* VIEW 1: TEACHER DASHBOARD */}
-      {currentView === "teacher" ? (
-        <TeacherDashboard
-          students={students}
-          onBackToApp={handleBackToApp}
-          onSelectStudentToPractice={handleSelectStudentToPractice}
-          onRefreshStudents={handleRefreshStudents}
-        />
-      ) : currentView === "dashboard" ? (
-        /* VIEW 2: CHADMATH MAIN DASHBOARD */
+      {/* VIEW 1: CHADMATH MAIN DASHBOARD */}
+      {currentView === "dashboard" ? (
         <ChadMathDashboard
           score={score}
           streak={streak}
@@ -625,12 +609,11 @@ export default function MultiplicationGroupsApp() {
           onToggleMultipleChoice={() => setIsMultipleChoice(!isMultipleChoice)}
           tableMastery={tableMastery}
           onStartPlay={handleStartPlay}
-          currentStudent={activeStudent || undefined}
-          onOpenPinModal={() => setIsPinModalOpen(true)}
-          onOpenTeacherDashboard={handleOpenTeacherDashboard}
+          currentStudent={activeStudent}
+          onOpenPinModal={handleOpenPinLogin}
         />
       ) : (
-        /* VIEW 3: WORKSHEET PRACTICE MODE */
+        /* VIEW 2: WORKSHEET PRACTICE MODE */
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Top Navbar with Dashboard return button */}
           <Navbar
@@ -643,9 +626,8 @@ export default function MultiplicationGroupsApp() {
             onOpenSelector={() => setIsFactSelectorOpen(true)}
             onOpenInstructions={() => setIsInstructionsOpen(true)}
             onBackToDashboard={() => setCurrentView("dashboard")}
-            currentStudent={activeStudent || undefined}
-            onOpenPinModal={() => setIsPinModalOpen(true)}
-            onOpenTeacherDashboard={handleOpenTeacherDashboard}
+            currentStudent={activeStudent}
+            onOpenPinModal={handleOpenPinLogin}
           />
 
           {/* MASSIVE Prominent Math Fact Equation Header (NO LABELS UNDERNEATH!) */}
@@ -786,16 +768,16 @@ export default function MultiplicationGroupsApp() {
       />
 
       {/* STUDENT PIN LOGIN & PROFILE SWITCH MODAL */}
-      {activeStudent && (
-        <PinLoginModal
-          isOpen={isPinModalOpen}
-          onClose={() => setIsPinModalOpen(false)}
-          students={students}
-          currentStudent={activeStudent}
-          onSelectStudent={handleSelectStudent}
-          onOpenTeacherDashboard={handleOpenTeacherDashboard}
-        />
-      )}
+      <PinLoginModal
+        isOpen={!isLoggedIn || isPinModalOpen}
+        onClose={() => {
+          if (isLoggedIn) setIsPinModalOpen(false);
+        }}
+        students={students}
+        currentStudent={activeStudent}
+        onSelectStudent={handleSelectStudent}
+        canClose={isLoggedIn}
+      />
     </div>
   );
 }
