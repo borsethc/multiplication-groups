@@ -3,15 +3,13 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { User, Sparkles, ArrowRight } from "lucide-react";
-import { StudentProfile } from "@/lib/studentStorage";
+import { ArrowRight } from "lucide-react";
 
 interface StudentLoginProps {
   onLogin: (username: string) => void;
-  existingStudents?: StudentProfile[];
 }
 
-export function StudentLogin({ onLogin, existingStudents = [] }: StudentLoginProps) {
+export function StudentLogin({ onLogin }: StudentLoginProps) {
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -100,31 +98,6 @@ export function StudentLogin({ onLogin, existingStudents = [] }: StudentLoginPro
             </>
           )}
         </button>
-
-        {/* Quick-Pick Existing Classroom Students */}
-        {existingStudents.length > 0 && (
-          <div className="w-full pt-3 mt-1 border-t border-white/10 flex flex-col items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
-              Or tap your profile:
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 max-h-24 overflow-y-auto">
-              {existingStudents.slice(0, 6).map((student) => (
-                <button
-                  key={student.id}
-                  type="button"
-                  onClick={() => {
-                    setUsername(student.name);
-                    onLogin(student.name);
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  <span>{student.avatar}</span>
-                  <span>{student.name.split(" ")[0]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </motion.form>
     </div>
   );

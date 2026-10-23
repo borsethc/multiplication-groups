@@ -592,7 +592,7 @@ export default function MultiplicationGroupsApp() {
 
       {/* VIEW 1: STUDENT LOGIN (WHEN NOT LOGGED IN) */}
       {!isLoggedIn ? (
-        <StudentLogin onLogin={handleLogin} existingStudents={students} />
+        <StudentLogin onLogin={handleLogin} />
       ) : currentView === "dashboard" ? (
         /* VIEW 2: CHADMATH MAIN DASHBOARD */
         <ChadMathDashboard
