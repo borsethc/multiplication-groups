@@ -9,13 +9,14 @@ import { Confetti } from "@/components/Confetti";
 import { InstructionsModal } from "@/components/InstructionsModal";
 import { FactSelectorModal } from "@/components/FactSelectorModal";
 import { ChadMathDashboard } from "@/components/ChadMathDashboard";
-import { PinLoginModal } from "@/components/PinLoginModal";
+import { StudentLogin } from "@/components/StudentLogin";
 import {
   StudentProfile,
   loadAllStudents,
   getActiveStudent,
   setActiveStudentPin,
   recordStudentFactResult,
+  loginOrCreateStudent,
 } from "@/lib/studentStorage";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
 import { RefreshCw, ArrowRight, Wand2 } from "lucide-react";
@@ -24,11 +25,10 @@ export default function MultiplicationGroupsApp() {
   // Main Navigation View: "dashboard" (ChadMath Home) or "practice" (Worksheet Scratchpad)
   const [currentView, setCurrentView] = useState<"dashboard" | "practice">("dashboard");
 
-  // Classroom & Student Profile PIN State
+  // Classroom & Student Profile State
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [activeStudent, setActiveStudent] = useState<StudentProfile | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(true);
 
   // Multi-selectable tables (defaulting to 2, 3, 4)
   const [selectedTables, setSelectedTables] = useState<number[]>([2, 3, 4]);
@@ -94,28 +94,23 @@ export default function MultiplicationGroupsApp() {
 
   const targetProduct = factorA * factorB;
 
-  // Restore persistence and prompt student login on initial visit
+  // Restore persistence and check active student login on initial visit
   useEffect(() => {
     if (typeof window !== "undefined") {
       const allStudents = loadAllStudents();
       setStudents(allStudents);
-      const sessionPin = sessionStorage.getItem("chadmath_active_login_pin");
-      if (sessionPin) {
-        const found = allStudents.find((s) => s.pin === sessionPin);
-        if (found) {
-          setActiveStudent(found);
-          setScore(found.score);
-          setStreak(found.streak);
-          setDailySessions(found.dailySessions);
-          setTableMastery(found.tableMastery);
-          setIsLoggedIn(true);
-          setIsPinModalOpen(false);
-          return;
-        }
+      const savedUser = localStorage.getItem("chadmath_active_user");
+      if (savedUser) {
+        const student = loginOrCreateStudent(savedUser);
+        setActiveStudent(student);
+        setScore(student.score);
+        setStreak(student.streak);
+        setDailySessions(student.dailySessions);
+        setTableMastery(student.tableMastery);
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
       }
-      // If no active session login, request student to log in with PIN
-      setIsLoggedIn(false);
-      setIsPinModalOpen(true);
     }
   }, []);
 
@@ -177,26 +172,26 @@ export default function MultiplicationGroupsApp() {
     setSelectedTables([]);
   };
 
-  // Student PIN Login and Switching
-  const handleSelectStudent = useCallback((student: StudentProfile) => {
-    setActiveStudentPin(student.pin);
+  // Student Login and Switching (Original ChadMath behavior)
+  const handleLogin = (username: string) => {
+    playHover();
+    const student = loginOrCreateStudent(username);
     setActiveStudent(student);
     setScore(student.score);
     setStreak(student.streak);
     setDailySessions(student.dailySessions);
     setTableMastery(student.tableMastery);
     setIsLoggedIn(true);
-    setIsPinModalOpen(false);
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("chadmath_active_login_pin", student.pin);
-    }
-    const updated = loadAllStudents();
-    setStudents(updated);
-  }, []);
+    setStudents(loadAllStudents());
+  };
 
-  const handleOpenPinLogin = () => {
+  const handleSwitchPlayer = () => {
     playHover();
-    setIsPinModalOpen(true);
+    setIsLoggedIn(false);
+    setActiveStudent(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("chadmath_active_user");
+    }
   };
 
   // Start Practice from Dashboard
@@ -595,8 +590,11 @@ export default function MultiplicationGroupsApp() {
       {/* Confetti celebration */}
       <Confetti trigger={confettiTrigger} />
 
-      {/* VIEW 1: CHADMATH MAIN DASHBOARD */}
-      {currentView === "dashboard" ? (
+      {/* VIEW 1: STUDENT LOGIN (WHEN NOT LOGGED IN) */}
+      {!isLoggedIn ? (
+        <StudentLogin onLogin={handleLogin} existingStudents={students} />
+      ) : currentView === "dashboard" ? (
+        /* VIEW 2: CHADMATH MAIN DASHBOARD */
         <ChadMathDashboard
           score={score}
           streak={streak}
@@ -610,10 +608,10 @@ export default function MultiplicationGroupsApp() {
           tableMastery={tableMastery}
           onStartPlay={handleStartPlay}
           currentStudent={activeStudent}
-          onOpenPinModal={handleOpenPinLogin}
+          onSwitchPlayer={handleSwitchPlayer}
         />
       ) : (
-        /* VIEW 2: WORKSHEET PRACTICE MODE */
+        /* VIEW 3: WORKSHEET PRACTICE MODE */
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Top Navbar with Dashboard return button */}
           <Navbar
@@ -627,7 +625,7 @@ export default function MultiplicationGroupsApp() {
             onOpenInstructions={() => setIsInstructionsOpen(true)}
             onBackToDashboard={() => setCurrentView("dashboard")}
             currentStudent={activeStudent}
-            onOpenPinModal={handleOpenPinLogin}
+            onSwitchPlayer={handleSwitchPlayer}
           />
 
           {/* MASSIVE Prominent Math Fact Equation Header (NO LABELS UNDERNEATH!) */}
@@ -767,17 +765,7 @@ export default function MultiplicationGroupsApp() {
         onSelectFact={(a, b) => loadFact(a, b)}
       />
 
-      {/* STUDENT PIN LOGIN & PROFILE SWITCH MODAL */}
-      <PinLoginModal
-        isOpen={!isLoggedIn || isPinModalOpen}
-        onClose={() => {
-          if (isLoggedIn) setIsPinModalOpen(false);
-        }}
-        students={students}
-        currentStudent={activeStudent}
-        onSelectStudent={handleSelectStudent}
-        canClose={isLoggedIn}
-      />
+
     </div>
   );
 }

@@ -14,7 +14,7 @@ interface NavbarProps {
   onOpenInstructions: () => void;
   onBackToDashboard?: () => void;
   currentStudent?: StudentProfile | null;
-  onOpenPinModal?: () => void;
+  onSwitchPlayer?: () => void;
 }
 
 export function Navbar({
@@ -27,7 +27,7 @@ export function Navbar({
   onOpenInstructions,
   onBackToDashboard,
   currentStudent,
-  onOpenPinModal,
+  onSwitchPlayer,
 }: NavbarProps) {
   return (
     <header className="w-full flex items-center justify-between py-1 px-2 sm:py-1.5 sm:px-4 md:px-6 border-b border-white/5 bg-[#08090e]/95 backdrop-blur-3xl sticky top-0 z-40 shrink-0">
@@ -60,11 +60,11 @@ export function Navbar({
       {/* Center: ACTIVE STUDENT PILL & MAIN MENU */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Active Student Pill */}
-        {currentStudent && onOpenPinModal && (
+        {currentStudent && onSwitchPlayer && (
           <button
-            onClick={onOpenPinModal}
+            onClick={onSwitchPlayer}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all shadow-sm cursor-pointer group"
-            title="Switch student profile"
+            title="Switch player"
           >
             <span className="text-base sm:text-lg">{currentStudent.avatar}</span>
             <span className="font-bold text-xs hidden xs:inline">{currentStudent.name.split(" ")[0]}</span>

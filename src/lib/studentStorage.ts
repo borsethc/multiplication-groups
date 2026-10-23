@@ -258,3 +258,57 @@ export function resetStudentProgress(id: string): StudentProfile | null {
   saveAllStudents(students);
   return reset;
 }
+
+export function loginOrCreateStudent(usernameOrPin: string): StudentProfile {
+  const students = loadAllStudents();
+  const trimmed = usernameOrPin.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Search existing by name, pin, or id (case-insensitive)
+  const existing = students.find(
+    (s) => s.name.toLowerCase() === lower || s.pin === trimmed || s.id.toLowerCase() === lower
+  );
+
+  if (existing) {
+    existing.lastActive = "Just now";
+    saveAllStudents(students);
+    setActiveStudentPin(existing.pin);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("chadmath_active_user", existing.name);
+    }
+    return existing;
+  }
+
+  // First-time player: automatically create their login and record their progress!
+  let newPin = Math.floor(1000 + Math.random() * 9000).toString();
+  while (students.some((s) => s.pin === newPin) || newPin === TEACHER_PIN) {
+    newPin = Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  const avatars = ["🌟", "🚀", "🦊", "⚡", "🦁", "🐼", "🦄", "🎯", "🔥", "🦅", "🏆", "💎"];
+  const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+
+  const newStudent: StudentProfile = {
+    id: `student-${Date.now()}`,
+    pin: newPin,
+    name: trimmed,
+    avatar: randomAvatar,
+    score: 0,
+    streak: 0,
+    dailySessions: 0,
+    tableMastery: { 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
+    totalSolved: 0,
+    totalAttempts: 0,
+    lastActive: "Just now",
+    history: [],
+  };
+
+  const updated = [...students, newStudent];
+  saveAllStudents(updated);
+  setActiveStudentPin(newPin);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("chadmath_active_user", newStudent.name);
+  }
+  return newStudent;
+}
+

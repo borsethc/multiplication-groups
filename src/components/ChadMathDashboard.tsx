@@ -18,7 +18,7 @@ interface ChadMathDashboardProps {
   tableMastery: Record<number, number>; // 2..9 -> 0..1
   onStartPlay: () => void;
   currentStudent?: StudentProfile | null;
-  onOpenPinModal?: () => void;
+  onSwitchPlayer?: () => void;
 }
 
 export function ChadMathDashboard({
@@ -34,7 +34,7 @@ export function ChadMathDashboard({
   tableMastery,
   onStartPlay,
   currentStudent,
-  onOpenPinModal,
+  onSwitchPlayer,
 }: ChadMathDashboardProps) {
   // Daily session progress (0 to 5)
   const sessionTarget = 5;
@@ -78,28 +78,24 @@ export function ChadMathDashboard({
       {/* MAIN DASHBOARD CARD (Fit 100% on iPhone & iPad with zero scrolling) */}
       <div className="w-full bg-[#10121b]/95 border border-white/10 rounded-2xl sm:rounded-3xl p-3 sm:p-4 backdrop-blur-2xl shadow-2xl flex flex-col items-center gap-2 sm:gap-3 shrink-0">
         
-        {/* STUDENT PIN PROFILE BAR */}
-        {currentStudent && onOpenPinModal && (
-          <div className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 shrink-0">
-            <div className="flex items-center gap-2 text-left">
+        {/* PLAYER HEADER & SWITCH (Original ChadMath Style) */}
+        {currentStudent && onSwitchPlayer && (
+          <div className="w-full flex items-center justify-between px-3 py-2 rounded-2xl bg-white/[0.04] border border-white/10 shrink-0">
+            <div className="flex items-center gap-2.5 text-left">
               <span className="text-xl sm:text-2xl">{currentStudent.avatar}</span>
-              <div>
-                <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+              <div className="flex flex-col">
+                <span className="text-[9px] uppercase tracking-wider text-white/40 font-bold">Player</span>
+                <span className="text-xs sm:text-sm font-bold text-white leading-tight">
                   {currentStudent.name}
-                </span>
-                <span className="text-[10px] text-white/50 font-medium">
-                  Solved: <strong className="text-cyan-300">{currentStudent.totalSolved}</strong> • Streak: <strong className="text-orange-400">{currentStudent.streak}</strong>
                 </span>
               </div>
             </div>
 
             <button
-              onClick={onOpenPinModal}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white text-[11px] font-bold border border-white/10 transition-colors cursor-pointer group"
-              title="Switch learner profile"
+              onClick={onSwitchPlayer}
+              className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white text-xs font-bold border border-white/10 transition-colors cursor-pointer"
             >
-              <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform" />
-              <span>Switch</span>
+              Switch Player
             </button>
           </div>
         )}
