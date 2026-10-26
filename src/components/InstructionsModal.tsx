@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
+import { X, ArrowLeft, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
 
 interface InstructionsModalProps {
   isOpen: boolean;
@@ -19,13 +19,23 @@ export function InstructionsModal({ isOpen, onClose }: InstructionsModalProps) {
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[#10121a] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl"
           >
-            <button
-              onClick={onClose}
-              className="absolute top-5 right-5 p-2 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-colors"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="absolute top-5 right-5 flex items-center gap-1.5">
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors cursor-pointer"
+                title="Return to Main Menu"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Main Menu</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
@@ -46,16 +56,16 @@ export function InstructionsModal({ isOpen, onClose }: InstructionsModalProps) {
                 </p>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-2.5">
-                    <span className="text-cyan-400 font-bold text-xs block mb-1">Factor 1 (2)</span>
+                    <span className="text-cyan-400 font-bold text-xs block mb-1">1st Factor (2)</span>
                     <strong className="text-white">Groups</strong> (lines to draw).
                   </div>
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-2.5">
-                    <span className="text-purple-400 font-bold text-xs block mb-1">Factor 2 (3)</span>
+                    <span className="text-purple-400 font-bold text-xs block mb-1">2nd Factor (3)</span>
                     <strong className="text-white">Items</strong> on each line.
                   </div>
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5">
                     <span className="text-amber-400 font-bold text-xs block mb-1">Product (6)</span>
-                    <strong className="text-white">Total</strong> answer.
+                    <strong className="text-white">Answer</strong> (the product).
                   </div>
                 </div>
               </div>
@@ -69,9 +79,9 @@ export function InstructionsModal({ isOpen, onClose }: InstructionsModalProps) {
                     1
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">How Many Groups? (Factor 1)</h4>
+                    <h4 className="font-bold text-white text-sm">How Many Groups? (1st Factor)</h4>
                     <p className="text-xs text-slate-400">
-                      Look at Factor 1 to see how many groups you need. Add groups by drawing horizontal lines with your finger!
+                      Look at the 1st Factor to see how many groups you need. Add groups by drawing horizontal lines with your finger!
                     </p>
                   </div>
                 </div>
@@ -81,9 +91,9 @@ export function InstructionsModal({ isOpen, onClose }: InstructionsModalProps) {
                     2
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">Place Items for Factor 2</h4>
+                    <h4 className="font-bold text-white text-sm">Place Items for 2nd Factor</h4>
                     <p className="text-xs text-slate-400">
-                      Tap each line to place the number of items specified by Factor 2.
+                      Tap each line to place the number of items specified by the 2nd Factor.
                     </p>
                   </div>
                 </div>

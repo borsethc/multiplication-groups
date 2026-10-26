@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume2, VolumeX, HelpCircle, Flame, ArrowLeft, RefreshCw, User } from "lucide-react";
+import { Volume2, VolumeX, HelpCircle, Flame, ArrowLeft, RefreshCw, User, Eye } from "lucide-react";
 import { StudentProfile } from "@/lib/studentStorage";
 
 interface NavbarProps {
@@ -15,6 +15,7 @@ interface NavbarProps {
   onBackToDashboard?: () => void;
   currentStudent?: StudentProfile | null;
   onSwitchPlayer?: () => void;
+  onOpenAccessibility?: () => void;
 }
 
 export function Navbar({
@@ -28,6 +29,7 @@ export function Navbar({
   onBackToDashboard,
   currentStudent,
   onSwitchPlayer,
+  onOpenAccessibility,
 }: NavbarProps) {
   return (
     <header className="w-full flex items-center justify-between py-1 px-2 sm:py-1.5 sm:px-4 md:px-6 border-b border-white/5 bg-[#08090e]/95 backdrop-blur-3xl sticky top-0 z-40 shrink-0">
@@ -43,8 +45,8 @@ export function Navbar({
               Groups
             </span>
           </div>
-          <span className="text-[9px] uppercase tracking-[0.2em] text-white/40 hidden sm:block font-bold">
-            Less Thinking, More Neural Linking
+          <span className="text-[9px] uppercase tracking-[0.2em] text-white/50 hidden sm:block font-bold">
+            Visual Multiplication Through Grouping
           </span>
         </div>
 
@@ -72,15 +74,20 @@ export function Navbar({
           </button>
         )}
 
+        {/* Pinned Math Fact in Navbar */}
+        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-mono font-black text-xs sm:text-sm shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+          <span>{factorA} × {factorB} = ?</span>
+        </div>
+
         {/* RETURN TO MAIN MENU BUTTON */}
         {onBackToDashboard && (
           <button
             onClick={onBackToDashboard}
-            className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/10 text-white font-bold text-xs sm:text-sm transition-all shadow-sm group cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/20 text-white font-bold text-xs sm:text-sm transition-all shadow-sm group cursor-pointer"
             title="Return to Main Menu"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-cyan-400 group-hover:-translate-x-0.5 transition-transform" />
-            <span className="hidden sm:inline">Main Menu</span>
+            <span className="font-bold text-xs sm:text-sm">Main Menu</span>
           </button>
         )}
       </div>
@@ -109,6 +116,17 @@ export function Navbar({
         >
           {isMuted ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />}
         </button>
+
+        {/* Accessibility Modal Toggle (Item 18) */}
+        {onOpenAccessibility && (
+          <button
+            onClick={onOpenAccessibility}
+            className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white transition-colors cursor-pointer"
+            title="Accessibility & Display Settings"
+          >
+            <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
+          </button>
+        )}
 
         {/* Help Guide */}
         <button

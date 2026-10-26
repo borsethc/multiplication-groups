@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Lightbulb, Lock } from "lucide-react";
 
 interface EquationHeaderProps {
   factorA: number; // Groups (Lines)
@@ -15,7 +15,9 @@ interface EquationHeaderProps {
   errorMessage?: string | null;
   isLinesComplete?: boolean;
   isTokensComplete?: boolean;
-  onHintClick?: (text: string) => void;
+  onOpenHint?: () => void;
+  isBuildLocked?: boolean;
+  isLargeFont?: boolean;
 }
 
 export function EquationHeader({
@@ -29,6 +31,9 @@ export function EquationHeader({
   errorMessage,
   isLinesComplete = false,
   isTokensComplete = false,
+  onOpenHint,
+  isBuildLocked = true,
+  isLargeFont = false,
 }: EquationHeaderProps) {
   const product = factorA * factorB;
 
@@ -36,11 +41,14 @@ export function EquationHeader({
   const factorAGreen = isLinesComplete || isSolved;
   const factorBGreen = isTokensComplete || isSolved;
 
+  // Model must be built (Step 3 or later) if build-lock is on
+  const isInputLocked = isBuildLocked && currentStep < 3 && !isSolved;
+
   return (
     <div className="w-full flex flex-col items-center justify-center shrink-0 select-none py-0.5 sm:py-1">
-      {/* MATH FACT ROW: COMPACT & PROMINENT WITH MATH VOCABULARY LABELS */}
-      <div className="flex items-start justify-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 flex-wrap">
-        
+      {/* MATH FACT ROW: PROMINENT EQUATION WITH CONTROLS */}
+      <div className="flex items-center justify-center gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 flex-wrap">
+
         {/* Factor 1 Column */}
         <div className="flex flex-col items-center gap-0.5 sm:gap-1">
           <motion.div
@@ -57,7 +65,11 @@ export function EquationHeader({
                 : "bg-white/5 border-white/15 text-white/75"
             }`}
           >
-            <span className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter drop-shadow-md">
+            <span
+              className={`font-black tracking-tighter drop-shadow-md ${
+                isLargeFont ? "text-3xl xs:text-4xl sm:text-5xl md:text-6xl" : "text-2xl xs:text-3xl sm:text-4xl md:text-5xl"
+              }`}
+            >
               {factorA}
             </span>
             {factorAGreen && (
@@ -71,7 +83,7 @@ export function EquationHeader({
             )}
           </motion.div>
           <span className="text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider text-cyan-400/90">
-            Factor 1
+            1st Factor (Groups)
           </span>
         </div>
 
@@ -98,7 +110,11 @@ export function EquationHeader({
                 : "bg-white/5 border-white/15 text-white/75"
             }`}
           >
-            <span className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter drop-shadow-md">
+            <span
+              className={`font-black tracking-tighter drop-shadow-md ${
+                isLargeFont ? "text-3xl xs:text-4xl sm:text-5xl md:text-6xl" : "text-2xl xs:text-3xl sm:text-4xl md:text-5xl"
+              }`}
+            >
               {factorB}
             </span>
             {factorBGreen && (
@@ -112,7 +128,7 @@ export function EquationHeader({
             )}
           </motion.div>
           <span className="text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider text-purple-400/90">
-            Factor 2
+            2nd Factor (In Each Group)
           </span>
         </div>
 
@@ -128,49 +144,84 @@ export function EquationHeader({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              onSubmitAnswer?.();
+              if (!isInputLocked) onSubmitAnswer?.();
             }}
             className="flex items-center relative"
           >
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={isSolved ? product : typedAnswer}
-              disabled={isSolved}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, "");
-                onAnswerChange?.(val);
-              }}
-              placeholder="?"
-              className={`w-16 h-10 xs:w-18 xs:h-11 sm:w-22 sm:h-13 md:w-26 md:h-15 rounded-xl sm:rounded-2xl text-center text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tight transition-all border-2 sm:border-3 outline-none ${
-                isSolved
-                  ? "bg-emerald-950/70 border-emerald-400 text-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.6)]"
-                  : errorMessage
-                  ? "bg-rose-950/60 border-rose-500 text-rose-300 animate-shake"
-                  : "bg-black/80 border-amber-400 text-amber-300 focus:border-amber-300 ring-2 sm:ring-3 ring-amber-400/25 shadow-[0_0_20px_rgba(245,158,11,0.25)]"
-              }`}
-            />
+            {isInputLocked ? (
+              /* Build-First Locked Indicator (Item 9) */
+              <div
+                className="w-16 h-10 xs:w-18 xs:h-11 sm:w-22 sm:h-13 md:w-26 md:h-15 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center bg-white/5 border-2 border-white/15 text-white/40 shadow-inner"
+                title="Build groups and dots first to unlock answer"
+              >
+                <Lock className="w-4 h-4 text-amber-400/70 mb-0.5" />
+                <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-bold text-amber-300/80">
+                  Build First
+                </span>
+              </div>
+            ) : (
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={isSolved ? product : typedAnswer}
+                disabled={isSolved}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "");
+                  onAnswerChange?.(val);
+                }}
+                placeholder="?"
+                className={`w-16 h-10 xs:w-18 xs:h-11 sm:w-22 sm:h-13 md:w-26 md:h-15 rounded-xl sm:rounded-2xl text-center font-black tracking-tight transition-all border-2 sm:border-3 outline-none ${
+                  isLargeFont ? "text-3xl xs:text-4xl sm:text-5xl md:text-6xl" : "text-2xl xs:text-3xl sm:text-4xl md:text-5xl"
+                } ${
+                  isSolved
+                    ? "bg-emerald-950/70 border-emerald-400 text-emerald-300 shadow-[0_0_30px_rgba(16,185,129,0.6)]"
+                    : errorMessage
+                    ? "bg-rose-950/60 border-rose-500 text-rose-300 animate-shake"
+                    : "bg-black/80 border-amber-400 text-amber-300 focus:border-amber-300 ring-2 sm:ring-3 ring-amber-400/25 shadow-[0_0_20px_rgba(245,158,11,0.25)]"
+                }`}
+              />
+            )}
 
-            {!isSolved && typedAnswer.length === 0 && (
+            {!isSolved && !isInputLocked && typedAnswer.length === 0 && (
               <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping pointer-events-none" />
             )}
           </form>
           <span className="text-[9px] xs:text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-400/90">
-            Product
+            Product (Answer)
           </span>
         </div>
+
+        {/* Prominent Visible Hint Button (Item 21) */}
+        {onOpenHint && (
+          <button
+            onClick={onOpenHint}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition-all font-bold text-xs cursor-pointer shadow-sm self-center ml-1"
+            title="View conceptual math hint"
+          >
+            <Lightbulb className="w-3.5 h-3.5 fill-current" />
+            <span className="hidden xs:inline">Hint</span>
+          </button>
+        )}
       </div>
 
-      {/* Subtle Error Message (Only when needed) */}
+      {/* Subtle Error Message with Interactive Hint Link (Item 21) */}
       {errorMessage && (
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: -2 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[11px] sm:text-xs text-rose-400 font-bold text-center mt-1 py-0.5 px-3 bg-rose-950/40 rounded-lg border border-rose-500/30"
+          className="text-[11px] sm:text-xs text-rose-300 font-bold text-center mt-1 py-1 px-3 bg-rose-950/50 rounded-lg border border-rose-500/30 flex items-center justify-center gap-1.5 flex-wrap"
         >
-          {errorMessage}
-        </motion.p>
+          <span>{errorMessage}</span>
+          {onOpenHint && (
+            <button
+              onClick={onOpenHint}
+              className="underline text-amber-300 hover:text-white font-bold ml-1 cursor-pointer"
+            >
+              💡 Open Hint
+            </button>
+          )}
+        </motion.div>
       )}
     </div>
   );

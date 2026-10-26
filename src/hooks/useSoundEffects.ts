@@ -6,7 +6,6 @@ export function useSoundEffects() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [speechEnabled, setSpeechEnabled] = useState(true);
 
   // Initialize Audio Context on user interaction
   const initAudio = useCallback(() => {
@@ -233,24 +232,21 @@ export function useSoundEffects() {
     osc.stop(ctx.currentTime + 0.23);
   }, [initAudio, isMuted]);
 
-  // Voice narration helper using Web Speech API
-  const speak = useCallback(
-    (text: string) => {
-      if (isMuted || !speechEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
-        return;
-      }
+  // Cancel any lingering browser speech synthesis on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.speak(utterance);
       } catch (e) {
-        console.warn("Speech synthesis error", e);
+        // ignore
       }
-    },
-    [isMuted, speechEnabled]
-  );
+    }
+  }, []);
+
+  // Voice narration is completely disabled per user requirement
+  const speak = useCallback((_text?: string) => {
+    // Voice instructions permanently disabled
+  }, []);
 
   return {
     initAudio,
@@ -265,7 +261,5 @@ export function useSoundEffects() {
     speak,
     isMuted,
     setIsMuted,
-    speechEnabled,
-    setSpeechEnabled,
   };
 }

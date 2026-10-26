@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Moon, Check, Sparkles, Pencil } from "lucide-react";
+import { X, ArrowLeft, FileText, Moon, Check, Sparkles, Pencil, Plus } from "lucide-react";
 
 export interface TokenState {
   id: string;
@@ -28,6 +28,13 @@ interface ScratchPadProps {
   onAddTokenToLine: (groupIndex: number) => void;
   onRemoveTokenFromLine: (groupIndex: number, tokenIndex: number) => void;
   onCountToken: (groupIndex: number, tokenIndex: number) => void;
+  onStartCountUp?: () => void;
+  isCountingUp?: boolean;
+  onAddGroupClick?: () => void;
+  onBackToMenu?: () => void;
+  isHighContrast?: boolean;
+  isDyslexiaFont?: boolean;
+  isLargeFont?: boolean;
 }
 
 export function ScratchPad({
@@ -40,6 +47,13 @@ export function ScratchPad({
   onAddTokenToLine,
   onRemoveTokenFromLine,
   onCountToken,
+  onStartCountUp,
+  isCountingUp = false,
+  onAddGroupClick,
+  onBackToMenu,
+  isHighContrast = false,
+  isDyslexiaFont = false,
+  isLargeFont = false,
 }: ScratchPadProps) {
   const padRef = useRef<HTMLDivElement>(null);
 
@@ -132,6 +146,7 @@ export function ScratchPad({
 
   const targetProduct = factorA * factorB;
   const totalTokensPlaced = lines.reduce((acc, l) => acc + l.tokens.length, 0);
+  const totalCounted = lines.reduce((acc, l) => acc + l.tokens.filter((t) => t.isCounted).length, 0);
 
   // Pointer Down (Finger touches pad)
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -173,12 +188,6 @@ export function ScratchPad({
   };
 
   const isLineReadyForTokens = lines.length === factorA && currentStep >= 2;
-
-  // Global counting number for each slot
-  const getSlotGlobalNumber = (lineIdx: number, slotIdx: number) => {
-    return lineIdx * factorB + slotIdx + 1;
-  };
-
   const isPaper = paperTheme === "paper";
 
   return (
@@ -210,30 +219,49 @@ export function ScratchPad({
       >
         {/* TOP WORKSHEET TITLE BAR */}
         <div
-          className={`w-full flex items-center justify-between px-3 py-1.5 md:px-4 md:py-2 z-20 shrink-0 border-b ${
+          className={`w-full flex items-center justify-between px-2.5 py-1.5 md:px-4 md:py-2 z-20 shrink-0 border-b ${
             isPaper
               ? "bg-[#f2efe6]/90 border-[#dcd7cb] text-[#475569]"
               : "bg-white/[0.03] border-white/5 text-white/50"
           }`}
         >
-          {/* Handout Title */}
-          <span className="font-serif italic font-bold text-xs sm:text-sm md:text-base tracking-tight text-current">
-            Classroom Worksheet: Multiples of {factorB}
-          </span>
+          {/* Handout Title with Explicit Math Fact & Main Menu Button */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {onBackToMenu && (
+              <button
+                type="button"
+                onClick={onBackToMenu}
+                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/25 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer shadow-sm mr-0.5"
+                title="Return to Main Menu"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="font-bold">Main Menu</span>
+              </button>
+            )}
+            <span className="font-serif italic font-bold text-xs sm:text-sm tracking-tight text-current hidden xs:inline">
+              Worksheet:
+            </span>
+            <span className="font-mono font-black text-xs sm:text-sm md:text-base text-cyan-400 bg-cyan-950/70 px-2 py-0.5 rounded-lg border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.25)]">
+              {factorA} × {factorB} = ?
+            </span>
+          </div>
 
-          {/* Compact Paper / Slate Theme Toggle */}
-          <button
-            onClick={() => setPaperTheme(isPaper ? "slate" : "paper")}
-            className={`px-2 py-1 rounded-lg border text-[11px] md:text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
-              isPaper
-                ? "bg-white/80 border-[#d2ccc0] text-[#1e293b] hover:bg-white shadow-sm"
-                : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
-            }`}
-            title={isPaper ? "Switch to Dark Slate" : "Switch to Classroom Paper"}
-          >
-            {isPaper ? <Moon className="w-3.5 h-3.5 text-indigo-600" /> : <FileText className="w-3.5 h-3.5 text-amber-300" />}
-            <span className="font-semibold hidden xs:inline">{isPaper ? "Dark Mode" : "Paper"}</span>
-          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+
+            {/* Compact Paper / Slate Theme Toggle */}
+            <button
+              onClick={() => setPaperTheme(isPaper ? "slate" : "paper")}
+              className={`px-2 py-1 rounded-lg border text-[11px] md:text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                isPaper
+                  ? "bg-white/80 border-[#d2ccc0] text-[#1e293b] hover:bg-white shadow-sm"
+                  : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
+              }`}
+              title={isPaper ? "Switch to Dark Slate" : "Switch to Classroom Paper"}
+            >
+              {isPaper ? <Moon className="w-3.5 h-3.5 text-indigo-600" /> : <FileText className="w-3.5 h-3.5 text-amber-300" />}
+              <span className="font-semibold hidden xs:inline">{isPaper ? "Dark Mode" : "Paper"}</span>
+            </button>
+          </div>
         </div>
 
         {/* PROMINENT STEP BANNER AT TOP OF SCRATCH PAD */}
@@ -269,17 +297,17 @@ export function ScratchPad({
             <div className="flex items-center gap-2 font-bold text-xs sm:text-sm md:text-base">
               {currentStep === 1 && (
                 <>
-                  <Pencil className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
+                  <Pencil className="w-4 h-4 md:w-5 md:h-5 shrink-0 text-cyan-400" />
                   <span>
-                    STEP 1: How Many Groups Do I Need? Add Groups by Drawing Lines.
+                    STEP 1: Look at 1st Factor → How many groups? Draw that many lines!
                   </span>
                 </>
               )}
               {currentStep === 2 && (
                 <>
-                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-current shrink-0" />
+                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-purple-400 shrink-0" />
                   <span>
-                    STEP 2: Tap Lines to Place <strong>{factorB}</strong> on Each (Factor 2)
+                    STEP 2: Look at 2nd Factor → How many in each group? Place them on each line!
                   </span>
                 </>
               )}
@@ -293,29 +321,52 @@ export function ScratchPad({
               )}
               {currentStep === 4 && (
                 <>
-                  <Sparkles className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
+                  <Sparkles className="w-4 h-4 md:w-5 md:h-5 shrink-0 text-cyan-400" />
                   <span>
-                    STEP 4: Tap Dots to Count Aloud, or Enter Product!
+                    {totalCounted < targetProduct
+                      ? `STEP 4: Counting Up Dots (${totalCounted} of ${targetProduct})...`
+                      : `STEP 4: Counted all ${targetProduct} dots! Answer is ${targetProduct} • Enter on Keypad!`}
                   </span>
                 </>
               )}
               {currentStep === 5 && (
                 <>
-                  <Check className="w-4 h-4 md:w-5 md:h-5 stroke-[3] shrink-0" />
+                  <Check className="w-4 h-4 md:w-5 md:h-5 stroke-[3] shrink-0 text-emerald-400" />
                   <span>
-                    SOLVED! {factorA} × {factorB} = <strong>{targetProduct}</strong> (Product)
+                    SOLVED! {factorA} × {factorB} = <strong>{targetProduct}</strong> • Next question loading...
                   </span>
                 </>
               )}
             </div>
 
-            {/* Step Progress Pill - Anti-Cheat (Never display targetProduct before solving!) */}
-            <div className="shrink-0 text-[10px] md:text-xs font-black px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-black/10 dark:bg-white/10">
-              {currentStep === 1 && `${lines.length} ${lines.length === 1 ? "Group" : "Groups"}`}
-              {currentStep === 2 && `${totalTokensPlaced} Placed`}
-              {currentStep === 3 && `Spot Pattern`}
-              {currentStep === 4 && `${lines.reduce((acc, l) => acc + l.tokens.filter(t => t.isCounted).length, 0)} Counted`}
-              {currentStep === 5 && `Solved!`}
+            {/* Step Progress Pill & Accessible + Group Button */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {currentStep === 1 && lines.length < factorA && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddGroupClick ? onAddGroupClick() : onAddLineGesture(100);
+                  }}
+                  className={`text-[11px] md:text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-sm transition-all cursor-pointer ${
+                    isPaper
+                      ? "bg-[#1e3a8a] hover:bg-[#1e40af] text-white"
+                      : "bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+                  }`}
+                  title="Add group line (Alternative to dragging for fine-motor ease)"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>+ Add Group Line</span>
+                </button>
+              )}
+
+              <div className="text-[10px] md:text-xs font-black px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-black/10 dark:bg-white/10">
+                {currentStep === 1 && `${lines.length} ${lines.length === 1 ? "Group" : "Groups"} Drawn`}
+                {currentStep === 2 && `${totalTokensPlaced} ${totalTokensPlaced === 1 ? "Dot" : "Dots"} Placed`}
+                {currentStep === 3 && `Spot Pattern`}
+                {currentStep === 4 && `${totalCounted} of ${targetProduct} Counted`}
+                {currentStep === 5 && `Solved!`}
+              </div>
             </div>
           </motion.div>
         </div>
@@ -327,16 +378,82 @@ export function ScratchPad({
             animate={{ opacity: 1, y: 0 }}
             className="w-full px-2.5 md:px-4 pb-1 z-20 shrink-0"
           >
-            <div className="w-full py-1.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-bold flex items-center justify-between shadow-sm">
-              <span className="flex items-center gap-1.5">
-                <span>Pattern:</span>
-                <strong className="text-white font-mono text-sm sm:text-base">
+            <div
+              className={`w-full py-1.5 px-3 rounded-xl border text-xs sm:text-sm font-bold flex items-center justify-between gap-2 shadow-sm ${
+                isPaper
+                  ? "bg-[#fef3c7] border-[#d97706] text-[#78350f]"
+                  : "bg-amber-500/20 border-amber-500/40 text-amber-200 shadow-[0_0_20px_rgba(245,158,11,0.25)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5 flex-wrap">
+                <span className={isPaper ? "text-[#78350f] font-black" : "text-amber-300 font-black"}>Pattern:</span>
+                <strong className={`font-mono text-sm sm:text-base font-black ${isPaper ? "text-[#78350f]" : "text-white"}`}>
                   {Array.from({ length: factorA }).map(() => factorB).join(" + ")} = ?
                 </strong>
+                <span className={`text-[10px] font-semibold ${isPaper ? "text-[#92400e]" : "text-amber-300/80"}`}>
+                  ({factorA} groups of {factorB})
+                </span>
               </span>
-              <span className="text-[10px] sm:text-xs text-amber-200/70 font-normal hidden xs:inline">
-                Type Product or tap dots to count
-              </span>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[10px] sm:text-xs font-semibold hidden md:inline ${isPaper ? "text-[#92400e]" : "text-amber-200/90"}`}>
+                  Type Product or
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onStartCountUp?.()}
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-cyan-500 hover:from-amber-400 hover:to-cyan-400 text-black font-black text-xs flex items-center gap-1 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  title="Count up dots sequentially to show the answer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Count Up to Answer (Step 4)</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* STEP 4 COUNT-UP SCAFFOLD CALLOUT (Final Scaffold to guide entering answer) */}
+        {currentStep === 4 && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full px-2.5 md:px-4 pb-1 z-20 shrink-0"
+          >
+            <div
+              className={`w-full py-1.5 px-3 rounded-xl border text-xs sm:text-sm font-bold flex items-center justify-between gap-2 shadow-sm ${
+                isPaper
+                  ? "bg-blue-50 border-blue-400 text-blue-950"
+                  : "bg-cyan-950/70 border-cyan-400/50 text-cyan-200 shadow-[0_0_20px_rgba(6,182,212,0.25)]"
+              }`}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-amber-400">Step 4 Final Scaffold:</span>
+                {totalCounted < targetProduct ? (
+                  <span>
+                    Counting dots to show answer: <strong className="text-white font-mono">{totalCounted}</strong> of <strong className="text-white font-mono">{targetProduct}</strong>...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 flex-wrap">
+                    <span>Count reached last dot!</span>
+                    <strong className="text-emerald-300 text-sm sm:text-base font-black px-2 py-0.5 rounded-lg bg-emerald-500/25 border border-emerald-400/50 shadow-sm font-mono">
+                      Answer = {targetProduct}
+                    </strong>
+                    <span className="text-white/80">→ Enter <strong className="text-white font-mono">{targetProduct}</strong> on the keypad to solve!</span>
+                  </span>
+                )}
+              </div>
+
+              {totalCounted < targetProduct && (
+                <button
+                  type="button"
+                  onClick={() => onStartCountUp?.()}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs flex items-center gap-1 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isCountingUp ? "Counting Up..." : "Count Up"}</span>
+                </button>
+              )}
             </div>
           </motion.div>
         )}
@@ -368,19 +485,22 @@ export function ScratchPad({
             >
               <span className="text-2xl md:text-3xl">✏️</span>
             </div>
+            <div className="flex items-center gap-2 mb-1 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono font-black text-xs sm:text-sm shadow-sm">
+              <span>Look at the Math Fact: {factorA} × {factorB} = ?</span>
+            </div>
             <p
               className={`text-sm sm:text-base md:text-xl font-black tracking-wide ${
                 isPaper ? "text-[#0f172a]" : "text-white"
               }`}
             >
-              How Many Groups Do I Need?
+              How Many Groups Do You Need?
             </p>
             <p
               className={`text-xs md:text-sm max-w-sm mt-1 leading-relaxed ${
-                isPaper ? "text-[#64748b]" : "text-white/60"
+                isPaper ? "text-[#334155] font-semibold" : "text-slate-200 font-medium"
               }`}
             >
-              Look at Factor 1 to see how many groups you need. Add groups by drawing horizontal lines!
+              Look at the 1st Factor to determine the number of equal groups. Draw horizontal lines or tap "+ Add Group Line" to build them!
             </p>
           </div>
         )}
@@ -444,30 +564,29 @@ export function ScratchPad({
                         "--tablet-w": `${tabletLineWidth}px`,
                       } as React.CSSProperties}
                     >
-                      {/* Active group indicator banner */}
-                      {currentStep === 2 && isCurrentActiveLine && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-[7px] sm:text-[8px] font-black uppercase tracking-wider animate-pulse whitespace-nowrap z-20 pointer-events-none">
-                          Group {groupIdx + 1}
+                      {/* Clear Group Label across Steps 2-5 */}
+                      {currentStep >= 2 && (
+                        <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full border text-[8px] sm:text-[9px] font-black uppercase tracking-wider whitespace-nowrap z-20 pointer-events-none ${
+                          currentStep === 2 && isCurrentActiveLine
+                            ? isPaper ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm animate-pulse" : "bg-cyan-500 text-black border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)] animate-pulse"
+                            : isPaper ? "bg-white/90 text-[#1e3a8a] border-[#cbd5e1]" : "bg-black/80 text-white/70 border-white/15"
+                        }`}>
+                          Group {groupIdx + 1}{currentStep > 2 ? ` (${factorB} ${factorB === 1 ? "dot" : "dots"})` : ""}
                         </div>
                       )}
 
                       {/* 1. NUMBERS ROW: Written directly ABOVE each dot */}
                       <div className="w-full flex items-center justify-around px-1 md:px-1.5 mb-0.5">
                         {Array.from({ length: factorB }).map((_, slotIdx) => {
-                          const globalNum = getSlotGlobalNumber(groupIdx, slotIdx);
                           const token = line.tokens[slotIdx];
                           const hasToken = !!token;
                           const isCounted = token?.isCounted;
-
-                          // ANTI-CHEAT NUMBERS:
-                          // In Step 2 & 3: show Factor 2 items (1..factorB, e.g. 1..9).
-                          // In Step 4 & 5: show running cumulative count ONLY when counted!
-                          // This guarantees the product (e.g. 81) is NEVER visible on the last button!
-                          const displayNum = isCounted
-                            ? (token.countNumber || globalNum)
-                            : currentStep >= 4
-                            ? ""
-                            : (slotIdx + 1);
+                          const dotNumber = slotIdx + 1;
+                          const isLastToken = isCounted && token?.countNumber === targetProduct;
+                          const displayNum =
+                            currentStep >= 4 && isCounted && token?.countNumber
+                              ? token.countNumber
+                              : dotNumber;
 
                           return (
                             <div
@@ -481,10 +600,16 @@ export function ScratchPad({
                               {hasToken && (
                                 <motion.span
                                   initial={{ opacity: 0, y: -3, scale: 0.8 }}
-                                  animate={{ opacity: 1, y: 0, scale: isCounted ? 1.15 : 1 }}
+                                  animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: isLastToken ? 1.3 : isCounted ? 1.15 : 1,
+                                  }}
                                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
                                   className={`font-black transition-colors ${numberTextClass} ${
-                                    isCounted
+                                    isLastToken
+                                      ? "text-emerald-400 font-black drop-shadow-[0_0_10px_rgba(52,211,153,0.9)] scale-110"
+                                      : isCounted
                                       ? isPaper
                                         ? "text-[#1d4ed8] font-black drop-shadow-sm"
                                         : "text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.7)]"
@@ -528,7 +653,7 @@ export function ScratchPad({
                           const token = line.tokens[slotIdx];
                           const hasToken = !!token;
                           const isCounted = token?.isCounted;
-                          const globalNum = getSlotGlobalNumber(groupIdx, slotIdx);
+                          const isLastToken = isCounted && token?.countNumber === targetProduct;
 
                           return (
                             <div
@@ -543,7 +668,10 @@ export function ScratchPad({
                                 // AUTHENTIC FILLED INK CIRCLE / DOT
                                 <motion.button
                                   initial={{ scale: 0, y: -6 }}
-                                  animate={{ scale: 1, y: 0 }}
+                                  animate={{
+                                    scale: isLastToken ? [1, 1.25, 1.1] : 1,
+                                    y: 0,
+                                  }}
                                   whileHover={{ scale: 1.15 }}
                                   whileTap={{ scale: 0.85 }}
                                   onClick={(e) => {
@@ -555,7 +683,9 @@ export function ScratchPad({
                                     }
                                   }}
                                   className={`relative ${dotSizeClass} rounded-full flex items-center justify-center transition-all select-none touch-manipulation shadow-sm ${
-                                    isCounted
+                                    isLastToken
+                                      ? "bg-gradient-to-br from-emerald-400 via-teal-300 to-emerald-500 text-black border-2 border-white ring-4 ring-emerald-400/50 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-110"
+                                      : isCounted
                                       ? isPaper
                                         ? "bg-[#1d4ed8] text-white border border-[#1e3a8a] shadow-[0_1px_4px_rgba(29,78,216,0.4)]"
                                         : "bg-gradient-to-br from-amber-400 to-amber-600 text-black border border-white shadow-[0_0_12px_rgba(245,158,11,0.6)]"
@@ -567,16 +697,29 @@ export function ScratchPad({
                                       ? "bg-[#1e293b] text-white border border-[#0f172a]"
                                       : "bg-gradient-to-br from-indigo-500 to-blue-600 text-white border border-white/80"
                                   }`}
-                                  title={`Group ${groupIdx + 1}, Item ${slotIdx + 1}`}
+                                  title={`Group ${groupIdx + 1}, Item ${slotIdx + 1}${token?.countNumber ? ` (Count: ${token.countNumber})` : ""}`}
                                 >
                                   {isCounted ? (
-                                    <span className="font-black leading-none">{token?.countNumber || globalNum}</span>
+                                    <span className="font-black text-[8px] sm:text-[9px] md:text-xs">
+                                      {token?.countNumber ?? slotIdx + 1}
+                                    </span>
                                   ) : (
                                     <div
                                       className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full ${
                                         isPaper ? "bg-white/80" : "bg-white/90"
                                       }`}
                                     />
+                                  )}
+
+                                  {/* Answer indicator badge pointing to final token */}
+                                  {isLastToken && (
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0.8, y: 4 }}
+                                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                                      className="absolute -bottom-5 sm:-bottom-6 px-1.5 py-0.5 rounded-md bg-emerald-400 text-black font-black text-[8px] sm:text-[9px] uppercase tracking-wider whitespace-nowrap shadow-lg border border-white z-30 pointer-events-none"
+                                    >
+                                      Answer: {targetProduct}
+                                    </motion.div>
                                   )}
                                 </motion.button>
                               ) : (
@@ -587,14 +730,14 @@ export function ScratchPad({
                                     if (canAddToken) onAddTokenToLine(groupIdx);
                                   }}
                                   className={`${emptySpotSizeClass} rounded-full flex items-center justify-center border border-dashed transition-colors ${
-                                    canAddToken
+                                    canAddToken && slotIdx === line.tokens.length
                                       ? isPaper
                                         ? "border-[#1e3a8a]/40 bg-[#1e3a8a]/5 cursor-pointer hover:border-[#1e3a8a]"
                                         : "border-cyan-400/50 bg-cyan-500/10 cursor-pointer hover:border-cyan-400"
                                       : "border-transparent"
                                   }`}
                                 >
-                                  {canAddToken && (
+                                  {canAddToken && slotIdx === line.tokens.length && (
                                     <div
                                       className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full animate-ping ${
                                         isPaper ? "bg-[#1e3a8a]" : "bg-cyan-400"
@@ -633,12 +776,12 @@ export function ScratchPad({
 
             {/* Prompt for next line in Step 1 */}
             {currentStep === 1 && lines.length > 0 && lines.length < factorA && (
-              <div className="flex items-center gap-1 opacity-60 shrink-0">
+              <div className="flex items-center gap-1 opacity-75 shrink-0">
                 <span className={`text-sm font-black ${isPaper ? "text-[#1e3a8a]" : "text-cyan-400"}`}>
                   +
                 </span>
-                <span className={`text-[10px] md:text-xs font-bold ${isPaper ? "text-[#64748b]" : "text-white/40"}`}>
-                  Draw line to add next group • Check Factor 1
+                <span className={`text-[10px] md:text-xs font-bold ${isPaper ? "text-[#64748b]" : "text-cyan-300"}`}>
+                  Need more groups? Check the 1st Factor and draw another line!
                 </span>
               </div>
             )}

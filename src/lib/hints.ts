@@ -131,7 +131,7 @@ export function getContextualHints(
   return [
     {
       id: "step4-solved",
-      badge: "🎉 MASTERED",
+      badge: "🎉 SOLVED",
       badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
       text: `Awesome! ${factorA} groups of ${factorB} = ${product}!`,
     },

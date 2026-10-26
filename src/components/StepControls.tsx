@@ -12,7 +12,6 @@ interface StepControlsProps {
   onValidateLines: () => void;
   onValidateTokens: () => void;
   onAutoFillTokens: () => void;
-  onAutoCountAll: () => void;
   onNextFact: () => void;
   onResetCurrentFact: () => void;
 }
@@ -24,7 +23,6 @@ export function StepControls({
   onValidateLines,
   onValidateTokens,
   onAutoFillTokens,
-  onAutoCountAll,
   onNextFact,
   onResetCurrentFact,
 }: StepControlsProps) {
@@ -98,14 +96,6 @@ export function StepControls({
           <span className="text-xs text-amber-300 font-semibold px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
             Touch tokens to count them, then type your answer above!
           </span>
-
-          <button
-            onClick={onAutoCountAll}
-            className="px-2.5 py-1 text-white/40 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
-          >
-            <Wand2 className="w-3 h-3" />
-            Count All
-          </button>
         </div>
       )}
 

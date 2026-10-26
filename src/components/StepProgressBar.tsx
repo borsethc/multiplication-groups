@@ -12,7 +12,7 @@ export function StepProgressBar({ currentStep }: StepProgressBarProps) {
     { num: 1, label: "1. Add Lines", icon: Layers, color: "text-cyan-400", border: "border-cyan-500" },
     { num: 2, label: "2. Add Tokens", icon: CircleDot, color: "text-purple-400", border: "border-purple-500" },
     { num: 3, label: "3. Count & Color", icon: Hash, color: "text-amber-400", border: "border-amber-500" },
-    { num: 4, label: "4. Mastered!", icon: Trophy, color: "text-emerald-400", border: "border-emerald-500" },
+    { num: 4, label: "4. Solved!", icon: Trophy, color: "text-emerald-400", border: "border-emerald-500" },
   ];
 
   return (

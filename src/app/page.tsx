@@ -10,20 +10,29 @@ import { InstructionsModal } from "@/components/InstructionsModal";
 import { FactSelectorModal } from "@/components/FactSelectorModal";
 import { ChadMathDashboard } from "@/components/ChadMathDashboard";
 import { StudentLogin } from "@/components/StudentLogin";
+import { ParentViewModal } from "@/components/ParentViewModal";
+import { AccessibilityModal, AccessibilitySettings } from "@/components/AccessibilityModal";
+import { HintModal } from "@/components/HintModal";
+import { SolvedFactReview } from "@/components/SolvedFactReview";
+import { MultiplesPractice } from "@/components/MultiplesPractice";
 import {
   StudentProfile,
   loadAllStudents,
-  getActiveStudent,
-  setActiveStudentPin,
   recordStudentFactResult,
   loginOrCreateStudent,
 } from "@/lib/studentStorage";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { RefreshCw, ArrowRight, Wand2 } from "lucide-react";
+import { RefreshCw, ArrowRight, Wand2, Lock, Eye, AlertTriangle } from "lucide-react";
+
+interface QueuedFact {
+  a: number;
+  b: number;
+  reason: "missed" | "mc_recall" | "abandoned" | "assisted_recall";
+}
 
 export default function MultiplicationGroupsApp() {
-  // Main Navigation View: "dashboard" (ChadMath Home) or "practice" (Worksheet Scratchpad)
-  const [currentView, setCurrentView] = useState<"dashboard" | "practice">("dashboard");
+  // Main Navigation View: default to "dashboard" (Main Menu) when starting!
+  const [currentView, setCurrentView] = useState<"dashboard" | "practice" | "multiples">("dashboard");
 
   // Classroom & Student Profile State
   const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -33,19 +42,54 @@ export default function MultiplicationGroupsApp() {
   // Multi-selectable tables (defaulting to 2, 3, 4)
   const [selectedTables, setSelectedTables] = useState<number[]>([2, 3, 4]);
 
+  // Practice Modes & Scaffolds
+  const [isMultipleChoice, setIsMultipleChoice] = useState<boolean>(false);
+  const [isBuildFirstLocked, setIsBuildFirstLocked] = useState<boolean>(true);
+
+  // Multiple Choice Stable State (Item 3 & 4: no reshuffling on click, permanent greying out)
+  const [currentMcOptions, setCurrentMcOptions] = useState<number[]>([]);
+  const [eliminatedMcOptions, setEliminatedMcOptions] = useState<number[]>([]);
+  const [mcRequiresTypingConfirmation, setMcRequiresTypingConfirmation] = useState<boolean>(false);
+  const [isRecallVerificationFact, setIsRecallVerificationFact] = useState<boolean>(false);
+
+  // Re-drill queue for missed, abandoned, and MC-solved facts (Item 5 & 8)
+  const [sessionReDrillQueue, setSessionReDrillQueue] = useState<QueuedFact[]>([]);
+  const [abandonedFact, setAbandonedFact] = useState<{ a: number; b: number } | null>(null);
+
+  // Solved Fact Review state (Item 7: explicit restatement in symbols, words, and dots)
+  const [solvedFactReview, setSolvedFactReview] = useState<{
+    factorA: number;
+    factorB: number;
+    product: number;
+    solveType: "free_recall" | "multiple_choice" | "assisted";
+  } | null>(null);
+
+  // Auto-advance timer ref for continuous frictionless gameplay
+  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Step 4 Auto Count-Up Scaffold
+  const [isCountingUp, setIsCountingUp] = useState<boolean>(false);
+  const countUpTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Assistance / Scaffolding flags for current fact (prevent assisted/counted solves from awarding mastery)
+  const [hasCountedDots, setHasCountedDots] = useState<boolean>(false);
+  const [hasUsedAutoFill, setHasUsedAutoFill] = useState<boolean>(false);
+  const [hasUsedHint, setHasUsedHint] = useState<boolean>(false);
+
   // Dashboard Configurations & Mastery Stats
   const [dailySessions, setDailySessions] = useState<number>(0);
-  const [isMultipleChoice, setIsMultipleChoice] = useState<boolean>(false);
+  const [currentSessionSolves, setCurrentSessionSolves] = useState<number>(0);
   const [tableMastery, setTableMastery] = useState<Record<number, number>>({
-    2: 0.6,
-    3: 0.4,
-    4: 0.3,
-    5: 0.5,
-    6: 0.2,
-    7: 0.1,
-    8: 0.2,
-    9: 0.1,
+    2: 0.4,
+    3: 0.3,
+    4: 0.2,
+    5: 0.1,
+    6: 0.0,
+    7: 0.0,
+    8: 0.0,
+    9: 0.0,
   });
+  const [mcMastery, setMcMastery] = useState<Record<number, number>>({});
 
   // Math Fact: factorA = Groups (Lines), factorB = Count per group (Tokens)
   const [factorA, setFactorA] = useState<number>(2);
@@ -61,20 +105,28 @@ export default function MultiplicationGroupsApp() {
   // Workspace Drawn Lines on Scratch Pad
   const [lines, setLines] = useState<DrawnLine[]>([]);
 
-  // Typing & Solving (Learner can enter answer at ANY time!)
+  // Typing & Solving
   const [typedAnswer, setTypedAnswer] = useState<string>("");
   const [isSolved, setIsSolved] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Modals & Celebrations
+  // Accessibility Settings (Item 18)
+  const [accessibilitySettings, setAccessibilitySettings] = useState<AccessibilitySettings>({
+    fontSize: "normal",
+    highContrast: false,
+    colorBlindSafe: false,
+    dyslexiaFont: false,
+  });
+
+  // Modals
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [isFactSelectorOpen, setIsFactSelectorOpen] = useState(false);
+  const [isParentViewOpen, setIsParentViewOpen] = useState(false);
+  const [isAccessibilityModalOpen, setIsAccessibilityModalOpen] = useState(false);
+  const [isHintModalOpen, setIsHintModalOpen] = useState(false);
   const [confettiTrigger, setConfettiTrigger] = useState(false);
 
-  // Timer reference for automatic next fact transition
-  const nextFactTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Sound & Speech
+  // Sound Effects
   const {
     initAudio,
     playHover,
@@ -85,59 +137,116 @@ export default function MultiplicationGroupsApp() {
     playGroupComplete,
     playFactSuccess,
     playIncorrect,
-    speak,
     isMuted,
     setIsMuted,
-    speechEnabled,
-    setSpeechEnabled,
   } = useSoundEffects();
 
   const targetProduct = factorA * factorB;
 
-  // Restore persistence and check active student login on initial visit
+  // Restore persistence and load settings on initial visit
   useEffect(() => {
     if (typeof window !== "undefined") {
       const allStudents = loadAllStudents();
       setStudents(allStudents);
+      let student: StudentProfile | null = null;
       const savedUser = localStorage.getItem("chadmath_active_user");
       if (savedUser) {
-        const student = loginOrCreateStudent(savedUser);
+        const result = loginOrCreateStudent(savedUser);
+        if (result.student && !result.requiresPin) {
+          student = result.student;
+        }
+      }
+
+      // If no saved user, default to first student or "Amy" so new users land right on the Main Menu!
+      if (!student) {
+        const defaultName = allStudents.length > 0 ? allStudents[0].name : "Amy";
+        const result = loginOrCreateStudent(defaultName);
+        if (result.student && !result.requiresPin) {
+          student = result.student;
+        }
+      }
+
+      if (student) {
         setActiveStudent(student);
         setScore(student.score);
         setStreak(student.streak);
         setDailySessions(student.dailySessions);
+        setCurrentSessionSolves((student.totalSolved || 0) % 5);
         setTableMastery(student.tableMastery);
+        setMcMastery(student.mcMastery || {});
         setIsLoggedIn(true);
+        setCurrentView("dashboard");
       } else {
         setIsLoggedIn(false);
+      }
+
+      // Load saved accessibility settings
+      try {
+        const savedA11y = localStorage.getItem("chadmath_accessibility");
+        if (savedA11y) {
+          setAccessibilitySettings(JSON.parse(savedA11y));
+        }
+      } catch (e) {
+        console.warn("Failed to load accessibility settings", e);
       }
     }
   }, []);
 
-  // Cleanup auto-advance timer on unmount
-  useEffect(() => {
-    return () => {
-      if (nextFactTimerRef.current) {
-        clearTimeout(nextFactTimerRef.current);
-      }
-    };
-  }, []);
+  // Save accessibility settings
+  const handleUpdateAccessibility = (newSettings: AccessibilitySettings) => {
+    setAccessibilitySettings(newSettings);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("chadmath_accessibility", JSON.stringify(newSettings));
+    }
+  };
 
-  // Helper to pick next fact matching selected tables (or all tables if none selected)
-  const getNextFactPair = useCallback((tables: number[]) => {
-    const activeTables = tables.length > 0 ? tables : [2, 3, 4, 5, 6, 7, 8, 9];
-    const a = activeTables[Math.floor(Math.random() * activeTables.length)];
-    const b = Math.floor(Math.random() * 8) + 2; // 2..9
-    return { a, b };
+  // Helper to pick next fact matching selected tables or re-drill queue
+  const getNextFactPair = useCallback(
+    (tables: number[], queue: QueuedFact[]) => {
+      // 1. Priority: Re-drill queue (missed, abandoned, or MC recall)
+      if (queue.length > 0) {
+        const [nextQueued] = queue;
+        return { a: nextQueued.a, b: nextQueued.b, fromQueue: true, reason: nextQueued.reason };
+      }
+
+      // 2. Sample from active tables (1st factor from selected tables, 2nd factor 2..9)
+      const activeTables = tables.length > 0 ? tables : [2, 3, 4, 5, 6, 7, 8, 9];
+      const a = activeTables[Math.floor(Math.random() * activeTables.length)];
+      const b = Math.floor(Math.random() * 8) + 2; // 2..9
+
+      return { a, b, fromQueue: false, reason: undefined };
+    },
+    []
+  );
+
+  // Generate 4 stable Multiple Choice options (correct + 3 non-duplicate plausible distractors)
+  const generateMcOptions = useCallback((a: number, b: number) => {
+    const correct = a * b;
+    const offsets = [-b, b, -2, 2, -1, 1, -(b + 1), b + 1];
+    const distractors = new Set<number>();
+    for (const off of offsets) {
+      const val = correct + off;
+      if (val > 0 && val !== correct) {
+        distractors.add(val);
+        if (distractors.size === 3) break;
+      }
+    }
+    // Fallback if needed
+    let fallback = 2;
+    while (distractors.size < 3) {
+      if (fallback !== correct && !distractors.has(fallback)) {
+        distractors.add(fallback);
+      }
+      fallback += 2;
+    }
+    const list = [correct, ...Array.from(distractors)].slice(0, 4);
+    // Shuffle ONCE at fact load time
+    return list.sort(() => Math.random() - 0.5);
   }, []);
 
   // Load a new fact
   const loadFact = useCallback(
-    (a: number, b: number) => {
-      if (nextFactTimerRef.current) {
-        clearTimeout(nextFactTimerRef.current);
-        nextFactTimerRef.current = null;
-      }
+    (a: number, b: number, isRecallVerification = false) => {
       setFactorA(a);
       setFactorB(b);
       setCurrentStep(1);
@@ -146,8 +255,27 @@ export default function MultiplicationGroupsApp() {
       setIsSolved(false);
       setErrorMessage(null);
       setConfettiTrigger(false);
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      if (countUpTimerRef.current) {
+        clearTimeout(countUpTimerRef.current);
+        countUpTimerRef.current = null;
+      }
+      setIsCountingUp(false);
+      setSolvedFactReview(null);
+      setMcRequiresTypingConfirmation(false);
+      setIsRecallVerificationFact(isRecallVerification);
+      setHasCountedDots(false);
+      setHasUsedAutoFill(false);
+      setHasUsedHint(false);
+
+      // Generate stable MC options for this fact and clear eliminated list
+      setCurrentMcOptions(generateMcOptions(a, b));
+      setEliminatedMcOptions([]);
     },
-    []
+    [generateMcOptions]
   );
 
   // Table selection toggles
@@ -167,22 +295,31 @@ export default function MultiplicationGroupsApp() {
     setSelectedTables([2, 3, 4, 5, 6, 7, 8, 9]);
   };
 
-  const handleClearTables = () => {
+  const handleDeselectAllTables = () => {
     playHover();
     setSelectedTables([]);
   };
 
-  // Student Login and Switching (Original ChadMath behavior)
-  const handleLogin = (username: string) => {
+  // Student Login and Switching
+  const handleLogin = (username: string, pin?: string) => {
     playHover();
-    const student = loginOrCreateStudent(username);
-    setActiveStudent(student);
-    setScore(student.score);
-    setStreak(student.streak);
-    setDailySessions(student.dailySessions);
-    setTableMastery(student.tableMastery);
-    setIsLoggedIn(true);
-    setStudents(loadAllStudents());
+    const result = loginOrCreateStudent(username, pin);
+    if (result.requiresPin || result.error) {
+      return { requiresPin: result.requiresPin, error: result.error };
+    }
+    if (result.student) {
+      const student = result.student;
+      setActiveStudent(student);
+      setScore(student.score);
+      setStreak(student.streak);
+      setDailySessions(student.dailySessions);
+      setCurrentSessionSolves((student.totalSolved || 0) % 5);
+      setTableMastery(student.tableMastery);
+      setMcMastery(student.mcMastery || {});
+      setIsLoggedIn(true);
+      setStudents(loadAllStudents());
+      setCurrentView("practice");
+    }
   };
 
   const handleSwitchPlayer = () => {
@@ -198,36 +335,88 @@ export default function MultiplicationGroupsApp() {
   const handleStartPlay = () => {
     initAudio();
     playHover();
-    const next = getNextFactPair(selectedTables);
-    loadFact(next.a, next.b);
+    const next = getNextFactPair(selectedTables, sessionReDrillQueue);
+    if (next.fromQueue) {
+      setSessionReDrillQueue((prev) => prev.slice(1));
+    }
+    loadFact(next.a, next.b, next.reason === "mc_recall" || next.reason === "assisted_recall");
     setCurrentView("practice");
-    speak(`How many groups do I need? Look at Factor 1 to determine how many lines to draw!`);
+  };
+
+  // Resume Abandoned Fact (Item 14)
+  const handleResumeAbandonedFact = () => {
+    if (!abandonedFact) return;
+    initAudio();
+    playHover();
+    loadFact(abandonedFact.a, abandonedFact.b);
+    setAbandonedFact(null);
+    setCurrentView("practice");
+  };
+
+  const handleDiscardAbandonedFact = () => {
+    playHover();
+    setAbandonedFact(null);
+  };
+
+  // Back to Main Menu: check for abandoned fact (Item 14)
+  const handleBackToDashboard = () => {
+    playHover();
+    if (!isSolved && lines.length > 0) {
+      // User is abandoning an in-progress fact! Save prompt and add to re-drill
+      setAbandonedFact({ a: factorA, b: factorB });
+      setSessionReDrillQueue((prev) => {
+        if (!prev.some((f) => f.a === factorA && f.b === factorB)) {
+          return [...prev, { a: factorA, b: factorB, reason: "abandoned" }];
+        }
+        return prev;
+      });
+    }
+    setCurrentView("dashboard");
   };
 
   const handleResetCurrentFact = () => {
-    if (nextFactTimerRef.current) {
-      clearTimeout(nextFactTimerRef.current);
-      nextFactTimerRef.current = null;
-    }
+    playHover();
     setCurrentStep(1);
     setLines([]);
     setTypedAnswer("");
     setIsSolved(false);
     setErrorMessage(null);
     setConfettiTrigger(false);
-    speak(`How many groups do I need? Look at Factor 1 to add groups by drawing lines.`);
+    setSolvedFactReview(null);
+    setEliminatedMcOptions([]);
+    setMcRequiresTypingConfirmation(false);
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    if (countUpTimerRef.current) {
+      clearTimeout(countUpTimerRef.current);
+      countUpTimerRef.current = null;
+    }
+    setIsCountingUp(false);
+    setHasCountedDots(false);
+    setHasUsedAutoFill(false);
+    setHasUsedHint(false);
   };
 
   const handleNextFact = useCallback(() => {
-    if (nextFactTimerRef.current) {
-      clearTimeout(nextFactTimerRef.current);
-      nextFactTimerRef.current = null;
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
     }
-    const next = getNextFactPair(selectedTables);
-    loadFact(next.a, next.b);
-  }, [getNextFactPair, selectedTables, loadFact]);
+    if (countUpTimerRef.current) {
+      clearTimeout(countUpTimerRef.current);
+      countUpTimerRef.current = null;
+    }
+    setIsCountingUp(false);
+    const next = getNextFactPair(selectedTables, sessionReDrillQueue);
+    if (next.fromQueue) {
+      setSessionReDrillQueue((prev) => prev.slice(1));
+    }
+    loadFact(next.a, next.b, next.reason === "mc_recall" || next.reason === "assisted_recall");
+  }, [getNextFactPair, selectedTables, sessionReDrillQueue, loadFact]);
 
-  // Step 1: Add a line via finger drawing gesture on scratch pad
+  // Step 1: Add a line via finger drawing gesture on scratch pad or "+ Group" button (Item 10)
   const handleAddLineGesture = (yPos: number) => {
     initAudio();
     if (lines.length >= 10) return;
@@ -249,11 +438,9 @@ export default function MultiplicationGroupsApp() {
     // AUTO-UNLOCK TOKEN PLACEMENT when correct number of lines are drawn!
     if (updated.length === factorA) {
       setCurrentStep(2);
-      speak(`Great job! You drew the groups for Factor 1! Now place ${factorB} on each line for Factor 2.`);
     } else if (updated.length > factorA) {
       playIncorrect();
-      setErrorMessage(`You have ${updated.length} lines. Look at Factor 1 and erase any extra.`);
-      speak(`Check Factor 1. Erase any extra lines.`);
+      setErrorMessage(`You have ${updated.length} lines. Look at 1st Factor and erase any extra.`);
     }
   };
 
@@ -281,9 +468,7 @@ export default function MultiplicationGroupsApp() {
     initAudio();
     if (currentStep !== 2) return;
 
-    // ANTI-CHEAT ENFORCEMENT:
-    // Learners must fill groups sequentially: Group 1, then Group 2, etc.
-    // They cannot skip ahead to click the last group!
+    // Sequential filling: Group 1, then Group 2, etc.
     const activeGroupIndex = lines.findIndex((l) => l.tokens.length < factorB);
     if (activeGroupIndex !== -1 && groupIndex !== activeGroupIndex) return;
 
@@ -309,7 +494,6 @@ export default function MultiplicationGroupsApp() {
     const totalPlaced = updated.reduce((acc, l) => acc + l.tokens.length, 0);
     if (totalPlaced === targetProduct) {
       setCurrentStep(3);
-      speak(`All placed for Factor 2! Look at the pattern, or enter the Product!`);
     }
   };
 
@@ -340,6 +524,7 @@ export default function MultiplicationGroupsApp() {
     initAudio();
     playAddToken(0);
     setErrorMessage(null);
+    setHasUsedAutoFill(true);
 
     const updated = lines.map((line) => {
       const needed = factorB - line.tokens.length;
@@ -355,7 +540,6 @@ export default function MultiplicationGroupsApp() {
 
     setLines(updated);
     setCurrentStep(3);
-    speak(`All items filled for Factor 2! Look at the pattern, or type your answer.`);
   };
 
   // Step 3 / 4: Count Tokens
@@ -364,20 +548,22 @@ export default function MultiplicationGroupsApp() {
     0
   );
 
-  const handleCountToken = (groupIndex?: number, tokenIndex?: number) => {
+  const handleCountToken = useCallback((groupIndex?: number, tokenIndex?: number) => {
     initAudio();
     if (currentStep !== 3 && currentStep !== 4) return;
     if (currentStep === 3) {
       setCurrentStep(4);
     }
+    setHasCountedDots(true);
 
-    // STRICTLY SEQUENTIAL COUNTING:
-    // Always count the next uncounted token in order to prevent cheating by clicking the last button!
-    const nextCount = totalCounted + 1;
+    const currentCount = lines.reduce(
+      (acc, line) => acc + line.tokens.filter((t) => t.isCounted).length,
+      0
+    );
+    const nextCount = currentCount + 1;
     if (nextCount > targetProduct) return;
 
     playCountToken(nextCount);
-    speak(String(nextCount));
 
     setLines((prev) => {
       let assigned = false;
@@ -403,41 +589,66 @@ export default function MultiplicationGroupsApp() {
         };
       });
     });
-  };
+  }, [currentStep, factorB, initAudio, lines, playCountToken, playGroupComplete, targetProduct]);
 
-  // Step 3 / 4 Helper: Auto count all
-  const handleAutoCountAll = () => {
+  // Step 4: Count Up to Show Answer (Final Scaffold)
+  const handleStartCountUp = useCallback(() => {
     initAudio();
-    if (currentStep !== 3 && currentStep !== 4) return;
+    if (currentStep < 3 || isSolved) return;
     setCurrentStep(4);
+    setHasCountedDots(true);
+    setIsCountingUp(true);
+  }, [currentStep, isSolved, initAudio]);
 
-    let count = totalCounted;
-    setLines((prev) =>
-      prev.map((l) => {
-        const newTokens = l.tokens.map((t) => {
-          if (!t.isCounted) {
-            count += 1;
-            return { ...t, isCounted: true, countNumber: count };
-          }
-          return t;
-        });
-        return {
-          ...l,
-          tokens: newTokens,
-          isGroupFullyCounted: true,
-        };
-      })
+  // Step 4: Automated Count-Up Effect
+  useEffect(() => {
+    if (!isCountingUp || currentStep !== 4 || isSolved) {
+      if (countUpTimerRef.current) {
+        clearTimeout(countUpTimerRef.current);
+        countUpTimerRef.current = null;
+      }
+      return;
+    }
+
+    const uncounted = lines.reduce(
+      (acc, l) => acc + l.tokens.filter((t) => !t.isCounted).length,
+      0
     );
-    speak(`All dots counted! Type the answer you counted.`);
-  };
 
-  // SUBMIT ANSWER — CAN BE ENTERED AT ANY TIME! AUTOMATIC NEXT FACT POP UP!
-  const handleSubmitAnswer = () => {
+    if (uncounted === 0) {
+      setIsCountingUp(false);
+      return;
+    }
+
+    countUpTimerRef.current = setTimeout(() => {
+      handleCountToken();
+    }, 130);
+
+    return () => {
+      if (countUpTimerRef.current) {
+        clearTimeout(countUpTimerRef.current);
+        countUpTimerRef.current = null;
+      }
+    };
+  }, [isCountingUp, currentStep, lines, isSolved, handleCountToken]);
+
+
+
+  // SUBMIT ANSWER (Free Recall or Multiple Choice)
+  const handleSubmitAnswer = (fromMultipleChoice = false, directAnswer?: number) => {
     initAudio();
-    if (!typedAnswer.trim()) return;
 
-    const num = parseInt(typedAnswer.trim(), 10);
-    if (num === targetProduct) {
+    // Check Build-First Lock (Item 9)
+    if (isBuildFirstLocked && currentStep < 3 && !isSolved) {
+      playIncorrect();
+      setErrorMessage("🔒 Build First is active! Draw your lines and place dots before typing the product.");
+      return;
+    }
+
+    const answerToCheck = directAnswer !== undefined ? directAnswer : parseInt(typedAnswer.trim(), 10);
+    if (isNaN(answerToCheck)) return;
+
+    if (answerToCheck === targetProduct) {
       // Build full visual confirmation model
       let currentCount = 0;
       const fullLines: DrawnLine[] = Array.from({ length: factorA }).map((_, gIdx) => ({
@@ -462,57 +673,76 @@ export default function MultiplicationGroupsApp() {
       setScore((prev) => prev + 1);
       setStreak((prev) => prev + 1);
 
-      // Record in student storage
+      // Determine solve type: Assisted if learner counted dots, used hint, or auto-filled
+      const isAssisted =
+        hasCountedDots ||
+        hasUsedAutoFill ||
+        hasUsedHint ||
+        lines.some((l) => l.tokens.some((t) => t.isCounted));
+
+      const solveType: "free_recall" | "multiple_choice" | "assisted" = fromMultipleChoice
+        ? "multiple_choice"
+        : isAssisted
+        ? "assisted"
+        : "free_recall";
+
+      // If solved with multiple choice or assisted (counted dots/hints), queue this fact for clean free recall practice!
+      if (fromMultipleChoice || isAssisted) {
+        const queueReason = fromMultipleChoice ? "mc_recall" : "assisted_recall";
+        setSessionReDrillQueue((prev) => {
+          if (!prev.some((f) => f.a === factorA && f.b === factorB && f.reason === queueReason)) {
+            return [...prev, { a: factorA, b: factorB, reason: queueReason }];
+          }
+          return prev;
+        });
+      }
+
+      // Record in student storage (Separate MC vs Recall Mastery: Item 6 & 11)
       if (activeStudent) {
         const updatedStudent = recordStudentFactResult(
           activeStudent.pin,
           factorA,
           factorB,
-          true
+          true,
+          solveType,
+          eliminatedMcOptions.length === 0,
+          selectedTables
         );
         if (updatedStudent) {
           setActiveStudent(updatedStudent);
           setDailySessions(updatedStudent.dailySessions);
+          setCurrentSessionSolves((updatedStudent.totalSolved || 0) % 5);
           setTableMastery(updatedStudent.tableMastery);
+          setMcMastery(updatedStudent.mcMastery || {});
           setStudents(loadAllStudents());
         }
       } else {
-        // Fallback local state increment
-        setDailySessions((prev) => {
-          const updated = Math.min(prev + 1, 5);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("chadmath_daily_sessions", String(updated));
-          }
-          return updated;
-        });
-
-        setTableMastery((prev) => {
-          const updated = {
-            ...prev,
-            [factorA]: Math.min(1, Number(((prev[factorA] || 0) + 0.1).toFixed(2))),
-            [factorB]: Math.min(1, Number(((prev[factorB] || 0) + 0.1).toFixed(2))),
-          };
-          if (typeof window !== "undefined") {
-            localStorage.setItem("chadmath_table_mastery", JSON.stringify(updated));
-          }
-          return updated;
-        });
+        // Fallback local session count
+        setCurrentSessionSolves((prev) => (prev + 1) % 5);
       }
 
+      setMcRequiresTypingConfirmation(false);
       playFactSuccess();
       setConfettiTrigger(true);
-      speak(`Correct! ${factorA} times ${factorB} equals the Product ${targetProduct}!`);
 
-      // NEXT FACT SHOULD AUTOMATICALLY POP UP AFTER CELEBRATION!
-      if (nextFactTimerRef.current) clearTimeout(nextFactTimerRef.current);
-      nextFactTimerRef.current = setTimeout(() => {
+      // Automatically advance to the next question without prompting!
+      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = setTimeout(() => {
         handleNextFact();
-      }, 1400);
+      }, 1300);
     } else {
+      // WRONG ANSWER
       playIncorrect();
       setStreak(0);
-      setErrorMessage(`Not quite! You entered ${num}. Count your dots or check the hint.`);
-      speak(`Try again.`);
+      setErrorMessage(`Not quite! You entered ${answerToCheck}. Check your groups or click 💡 Hint.`);
+
+      // Add to re-drill queue for missed facts (Item 8)
+      setSessionReDrillQueue((prev) => {
+        if (!prev.some((f) => f.a === factorA && f.b === factorB)) {
+          return [...prev, { a: factorA, b: factorB, reason: "missed" }];
+        }
+        return prev;
+      });
 
       // Record incorrect attempt in student storage
       if (activeStudent) {
@@ -520,7 +750,10 @@ export default function MultiplicationGroupsApp() {
           activeStudent.pin,
           factorA,
           factorB,
-          false
+          false,
+          fromMultipleChoice ? "multiple_choice" : "free_recall",
+          false,
+          selectedTables
         );
         if (updatedStudent) {
           setActiveStudent(updatedStudent);
@@ -530,30 +763,99 @@ export default function MultiplicationGroupsApp() {
     }
   };
 
-  // Multiple Choice Options Generator
-  const multipleChoiceOptions = useCallback(() => {
-    const correct = targetProduct;
-    const offsets = [-factorB, factorB, -2, 2, -1, 1];
-    const distractors = new Set<number>();
-    for (const off of offsets) {
-      const val = correct + off;
-      if (val > 0 && val !== correct) {
-        distractors.add(val);
-        if (distractors.size === 3) break;
+  // MULTIPLE CHOICE IMMEDIATE 1-CLICK HANDLER: Auto-evaluates and auto-advances
+  const handleMultipleChoiceClick = (opt: number) => {
+    initAudio();
+    if (isSolved || eliminatedMcOptions.includes(opt)) return;
+
+    if (opt === targetProduct) {
+      setErrorMessage(null);
+      setTypedAnswer(String(opt));
+      handleSubmitAnswer(true, opt);
+    } else {
+      // Wrong option clicked:
+      // Permanently eliminate without reshuffling (Item 3 & 4)
+      playIncorrect();
+      setEliminatedMcOptions((prev) => [...prev, opt]);
+      setStreak(0);
+      setErrorMessage(`Eliminated ${opt}! It is not the correct product. Check the groups or click 💡 Hint.`);
+
+      // Add to session re-drill queue
+      setSessionReDrillQueue((prev) => {
+        if (!prev.some((f) => f.a === factorA && f.b === factorB)) {
+          return [...prev, { a: factorA, b: factorB, reason: "missed" }];
+        }
+        return prev;
+      });
+
+      if (activeStudent) {
+        const updated = recordStudentFactResult(
+          activeStudent.pin,
+          factorA,
+          factorB,
+          false,
+          "multiple_choice",
+          false,
+          selectedTables
+        );
+        if (updated) {
+          setActiveStudent(updated);
+          setStudents(loadAllStudents());
+        }
       }
     }
-    const list = [correct, ...Array.from(distractors)].slice(0, 4);
-    return list.sort(() => Math.random() - 0.5);
-  }, [targetProduct, factorB]);
+  };
 
-  // Physical keyboard listeners
+  // Physical keyboard listeners (Item 22: fix double-digit entry)
+  const lastKeyTimeRef = useRef<number>(0);
+
   useEffect(() => {
     if (currentView !== "practice") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isInstructionsOpen || isFactSelectorOpen) return;
+      // Avoid intercepting if modals are open
+      if (
+        isInstructionsOpen ||
+        isFactSelectorOpen ||
+        isParentViewOpen ||
+        isAccessibilityModalOpen ||
+        isHintModalOpen
+      ) {
+        return;
+      }
+
+      // If solved, pressing Enter or Space advances immediately to the next question without waiting
+      if (isSolved) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
+          handleNextFact();
+        }
+        return;
+      }
+
+      // ROOT CAUSE FIX FOR ITEM 22:
+      // If the target is an HTML input element (like the EquationHeader input),
+      // DO NOT process keydown event here, otherwise the digit gets appended twice!
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key === "Enter") {
+          handleSubmitAnswer(false);
+        }
+        return;
+      }
+
+      // Debounce rapid repeats
+      const now = Date.now();
+      if (now - lastKeyTimeRef.current < 50) return;
+      lastKeyTimeRef.current = now;
 
       if (/^[0-9]$/.test(e.key)) {
+        if (isBuildFirstLocked && currentStep < 3 && !isSolved) {
+          playIncorrect();
+          setErrorMessage("🔒 Build First is active! Draw your lines and place dots before typing.");
+          return;
+        }
+
         playHover();
         if (typedAnswer.length < 4 && !isSolved) {
           setTypedAnswer((prev) => prev + e.key);
@@ -565,7 +867,7 @@ export default function MultiplicationGroupsApp() {
         }
       } else if (e.key === "Enter") {
         if (typedAnswer.length > 0) {
-          handleSubmitAnswer();
+          handleSubmitAnswer(false);
         }
       }
     };
@@ -576,42 +878,106 @@ export default function MultiplicationGroupsApp() {
     currentView,
     typedAnswer,
     isSolved,
+    isBuildFirstLocked,
+    currentStep,
     isInstructionsOpen,
     isFactSelectorOpen,
+    isParentViewOpen,
+    isAccessibilityModalOpen,
+    isHintModalOpen,
+    solvedFactReview,
     playHover,
+    playIncorrect,
     handleSubmitAnswer,
   ]);
 
+  // Root class for accessibility options
+  const rootAccessibilityClasses = [
+    accessibilitySettings.fontSize === "large" ? "text-lg" : "",
+    accessibilitySettings.highContrast ? "contrast-125" : "",
+    accessibilitySettings.dyslexiaFont ? "font-sans tracking-wide" : "",
+  ].join(" ");
+
   return (
-    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#07080c] text-foreground flex flex-col relative select-none">
-      {/* Background Ambience Pattern (ChadMath exact grid) */}
+    <div
+      className={`h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#07080c] text-foreground flex flex-col relative select-none pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] ${rootAccessibilityClasses}`}
+    >
+      {/* Background Ambience Pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f22_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f22_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
       {/* Confetti celebration */}
       <Confetti trigger={confettiTrigger} />
 
+      {/* Solved Fact Restatement Modal removed to ensure seamless auto-advance without prompting */}
+
       {/* VIEW 1: STUDENT LOGIN (WHEN NOT LOGGED IN) */}
       {!isLoggedIn ? (
-        <StudentLogin onLogin={handleLogin} />
+        <StudentLogin
+          onLogin={handleLogin}
+          onBackToMenu={() => {
+            const result = loginOrCreateStudent("Amy");
+            if (result.student) setActiveStudent(result.student);
+            setIsLoggedIn(true);
+            setCurrentView("dashboard");
+          }}
+        />
       ) : currentView === "dashboard" ? (
         /* VIEW 2: CHADMATH MAIN DASHBOARD */
         <ChadMathDashboard
           score={score}
           streak={streak}
           dailySessions={dailySessions}
+          currentSessionSolves={currentSessionSolves}
           selectedTables={selectedTables}
           onToggleTable={handleToggleTable}
           onSelectAllTables={handleSelectAllTables}
-          onClearTables={handleClearTables}
+          onDeselectAllTables={handleDeselectAllTables}
           isMultipleChoice={isMultipleChoice}
           onToggleMultipleChoice={() => setIsMultipleChoice(!isMultipleChoice)}
+          isBuildLocked={isBuildFirstLocked}
+          onToggleBuildLocked={() => setIsBuildFirstLocked(!isBuildFirstLocked)}
           tableMastery={tableMastery}
+          mcMastery={mcMastery}
           onStartPlay={handleStartPlay}
           currentStudent={activeStudent}
           onSwitchPlayer={handleSwitchPlayer}
+          abandonedFact={abandonedFact}
+          onResumeAbandonedFact={handleResumeAbandonedFact}
+          onDiscardAbandonedFact={handleDiscardAbandonedFact}
+          onOpenParentView={() => setIsParentViewOpen(true)}
+          onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
+          onStartMultiples={() => {
+            initAudio();
+            setCurrentView("multiples");
+          }}
+        />
+      ) : currentView === "multiples" ? (
+        /* VIEW 3: MULTIPLES / SKIP-COUNTING PRACTICE */
+        <MultiplesPractice
+          studentPin={activeStudent?.pin}
+          onBackToMenu={() => setCurrentView("dashboard")}
+          onPlaySuccess={() => {
+            playFactSuccess();
+            setScore((s) => s + 15);
+            setStreak((st) => st + 1);
+          }}
+          onPlayIncorrect={() => playIncorrect()}
+          onFactSolved={() => {
+            if (activeStudent) {
+              // Award session progress for completing a full 10-multiple sequence
+              setCurrentSessionSolves((prev) => {
+                const next = prev + 1;
+                if (next >= 5) {
+                  setDailySessions((d) => d + 1);
+                  return 0;
+                }
+                return next;
+              });
+            }
+          }}
         />
       ) : (
-        /* VIEW 3: WORKSHEET PRACTICE MODE */
+        /* VIEW 4: WORKSHEET PRACTICE MODE */
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Top Navbar with Dashboard return button */}
           <Navbar
@@ -623,12 +989,23 @@ export default function MultiplicationGroupsApp() {
             onToggleMute={() => setIsMuted(!isMuted)}
             onOpenSelector={() => setIsFactSelectorOpen(true)}
             onOpenInstructions={() => setIsInstructionsOpen(true)}
-            onBackToDashboard={() => setCurrentView("dashboard")}
+            onBackToDashboard={handleBackToDashboard}
             currentStudent={activeStudent}
             onSwitchPlayer={handleSwitchPlayer}
+            onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
           />
 
-          {/* MASSIVE Prominent Math Fact Equation Header (NO LABELS UNDERNEATH!) */}
+          {/* Re-Drill Notification Banner (Item 8) */}
+          {sessionReDrillQueue.length > 0 && (
+            <div className="bg-amber-500/15 border-b border-amber-500/30 px-3 py-1 text-center flex items-center justify-center gap-2 text-xs text-amber-300 font-bold shrink-0">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>
+                Session Re-Drill active: {sessionReDrillQueue.length} fact(s) queued for recall practice
+              </span>
+            </div>
+          )}
+
+          {/* MASSIVE Prominent Math Fact Equation Header */}
           <div className="px-2 sm:px-4 pt-1 shrink-0 z-20">
             <EquationHeader
               factorA={factorA}
@@ -641,18 +1018,27 @@ export default function MultiplicationGroupsApp() {
                 setErrorMessage(null);
                 setTypedAnswer(val);
               }}
-              onSubmitAnswer={handleSubmitAnswer}
+              onSubmitAnswer={() => handleSubmitAnswer(false)}
               errorMessage={errorMessage}
               isLinesComplete={lines.length === factorA || isSolved}
-              isTokensComplete={(lines.length === factorA && lines.length > 0 && lines.every((l) => l.tokens.length === factorB)) || isSolved}
-              onHintClick={(text) => speak(text)}
+              isTokensComplete={
+                (lines.length === factorA &&
+                  lines.length > 0 &&
+                  lines.every((l) => l.tokens.length === factorB)) ||
+                isSolved
+              }
+              onOpenHint={() => {
+                setIsHintModalOpen(true);
+                setHasUsedHint(true);
+              }}
+              isBuildLocked={isBuildFirstLocked}
+              isLargeFont={accessibilitySettings.fontSize === "large"}
             />
           </div>
 
-          {/* MAIN WORKSPACE: CLASSROOM WORKSHEET SCRATCH PAD & NUMPAD (ZERO SCROLLING, FULL IPAD FIT) */}
+          {/* MAIN WORKSPACE: CLASSROOM WORKSHEET SCRATCH PAD & NUMPAD */}
           <main className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-1 md:py-2 flex flex-col md:flex-row items-stretch justify-between gap-2 sm:gap-3 md:gap-5 relative z-10 overflow-hidden">
-            
-            {/* SCRATCH PAD: REPLICATES CLASSROOM HANDOUT WORKSHEET */}
+            {/* SCRATCH PAD */}
             <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
               <ScratchPad
                 factorA={factorA}
@@ -664,70 +1050,90 @@ export default function MultiplicationGroupsApp() {
                 onAddTokenToLine={handleAddTokenToLine}
                 onRemoveTokenFromLine={handleRemoveTokenFromLine}
                 onCountToken={handleCountToken}
+                onStartCountUp={handleStartCountUp}
+                isCountingUp={isCountingUp}
+                onAddGroupClick={() => handleAddLineGesture(100)}
+                onBackToMenu={() => setCurrentView("dashboard")}
+                isHighContrast={accessibilitySettings.highContrast}
+                isDyslexiaFont={accessibilitySettings.dyslexiaFont}
+                isLargeFont={accessibilitySettings.fontSize === "large"}
               />
             </div>
 
             {/* SIDE / BOTTOM PANEL: NUMPAD OR MULTIPLE CHOICE */}
             <div className="shrink-0 w-full md:w-[280px] lg:w-[320px] flex flex-col items-center justify-between gap-1.5 sm:gap-2">
-              {isMultipleChoice ? (
-                <div className="w-full p-3 rounded-3xl bg-white/[0.04] border border-white/10 flex flex-col gap-2 shadow-xl">
-                  <span className="text-[10px] md:text-xs uppercase tracking-widest text-white/50 text-center font-bold">
-                    Select The Product
-                  </span>
-                  <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
-                    {multipleChoiceOptions().map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => {
-                          setTypedAnswer(String(opt));
-                          setTimeout(() => {
-                            if (opt === targetProduct) {
-                              handleSubmitAnswer();
-                            } else {
-                              playIncorrect();
-                              setErrorMessage(`Not ${opt}. Try again!`);
-                            }
-                          }, 50);
-                        }}
-                        disabled={isSolved}
-                        className="h-11 sm:h-12 md:h-14 rounded-2xl bg-white/5 hover:bg-white/15 active:scale-95 border border-white/10 text-white font-black text-lg md:text-xl transition-all cursor-pointer flex items-center justify-center"
-                      >
-                        {opt}
-                      </button>
-                    ))}
+              {isMultipleChoice && !isRecallVerificationFact ? (
+                <div className="w-full p-3 rounded-3xl bg-white/[0.04] border border-white/10 flex flex-col gap-2.5 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] md:text-xs uppercase tracking-widest text-amber-400 font-black">
+                      Scaffold Mode
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest text-white/50">
+                      Recognition Only
+                    </span>
                   </div>
+
+                  {/* Item 2: Do not show options until groups & dots are built! */}
+                  {currentStep < 3 && !isSolved ? (
+                    <div className="py-6 px-3 rounded-2xl bg-black/40 border border-white/5 flex flex-col items-center text-center gap-2 text-white/60">
+                      <Lock className="w-6 h-6 text-amber-400 animate-pulse" />
+                      <p className="text-xs font-bold text-white/80">
+                        Build groups & dots first
+                      </p>
+                      <p className="text-[11px] text-white/50">
+                        Build your groups and dots to unlock multiple choice options!
+                      </p>
+                    </div>
+                  ) : (
+                    /* Item 3 & 4: Options shown with permanent elimination and 1-click evaluation */
+                    <div className="grid grid-cols-2 gap-2">
+                      {currentMcOptions.map((opt) => {
+                        const isEliminated = eliminatedMcOptions.includes(opt);
+                        return (
+                          <button
+                            key={opt}
+                            onClick={() => handleMultipleChoiceClick(opt)}
+                            disabled={isSolved || isEliminated}
+                            className={`h-12 sm:h-14 rounded-2xl font-black text-lg sm:text-xl transition-all cursor-pointer flex items-center justify-center border ${
+                              isEliminated
+                                ? "bg-red-500/10 border-red-500/20 text-white/20 line-through cursor-not-allowed"
+                                : "bg-white/5 hover:bg-white/15 active:scale-95 border-white/10 text-white hover:border-cyan-500/50"
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-white/40 text-center">
+                    Clean recall solve required afterwards to build table mastery
+                  </p>
                 </div>
               ) : (
-                <Numpad
-                  value={typedAnswer}
-                  onChange={(val) => {
-                    setErrorMessage(null);
-                    setTypedAnswer(val);
-                  }}
-                  onSubmit={handleSubmitAnswer}
-                  disabled={isSolved}
-                  onKeyPressSound={playHover}
-                />
+                <div className="w-full flex flex-col gap-2">
+                  {isRecallVerificationFact && (
+                    <div className="p-2 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-center flex items-center justify-center gap-1.5 text-xs text-indigo-300 font-bold">
+                      <span>⭐ Recall Verification: Type answer from memory!</span>
+                    </div>
+                  )}
+                  <Numpad
+                    value={typedAnswer}
+                    onChange={(val) => {
+                      setErrorMessage(null);
+                      setTypedAnswer(val);
+                    }}
+                    onSubmit={() => handleSubmitAnswer(false)}
+                    disabled={isSolved || (isBuildFirstLocked && currentStep < 3)}
+                    onKeyPressSound={playHover}
+                  />
+                </div>
               )}
 
               {/* Quick Helper Action Pills */}
-              <div className="flex items-center justify-center gap-2 w-full">
-                {currentStep === 2 && (
-                  <button
-                    onClick={handleAutoFillTokens}
-                    className="text-xs md:text-sm font-bold text-purple-300 hover:text-white bg-purple-500/10 active:bg-purple-500/20 px-3.5 py-1.5 rounded-xl border border-purple-500/20 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    <Wand2 className="w-3.5 h-3.5" /> Auto-Fill
-                  </button>
-                )}
-                {(currentStep === 3 || currentStep === 4) && (
-                  <button
-                    onClick={handleAutoCountAll}
-                    className="text-xs md:text-sm font-bold text-amber-300 hover:text-white bg-amber-500/10 active:bg-amber-500/20 px-3.5 py-1.5 rounded-xl border border-amber-500/20 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    <Wand2 className="w-3.5 h-3.5" /> Count All
-                  </button>
-                )}
+              <div className="flex items-center justify-center gap-2 w-full flex-wrap">
+
                 {currentStep === 5 ? (
                   <button
                     onClick={handleNextFact}
@@ -741,7 +1147,7 @@ export default function MultiplicationGroupsApp() {
                       onClick={handleResetCurrentFact}
                       className="text-xs font-bold text-white/40 hover:text-white px-3 py-1.5 rounded-xl hover:bg-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" /> Reset
+                      <RefreshCw className="w-3.5 h-3.5" /> Reset Model
                     </button>
                   )
                 )}
@@ -765,7 +1171,35 @@ export default function MultiplicationGroupsApp() {
         onSelectFact={(a, b) => loadFact(a, b)}
       />
 
+      <ParentViewModal
+        isOpen={isParentViewOpen}
+        onClose={() => setIsParentViewOpen(false)}
+        student={activeStudent}
+        onStudentUpdated={(updated) => {
+          setActiveStudent(updated);
+          if (updated) {
+            setStudents(loadAllStudents());
+          } else {
+            handleSwitchPlayer();
+          }
+        }}
+      />
 
+      <AccessibilityModal
+        isOpen={isAccessibilityModalOpen}
+        onClose={() => setIsAccessibilityModalOpen(false)}
+        settings={accessibilitySettings}
+        onUpdateSettings={handleUpdateAccessibility}
+      />
+
+      <HintModal
+        isOpen={isHintModalOpen}
+        onClose={() => setIsHintModalOpen(false)}
+        factorA={factorA}
+        factorB={factorB}
+        currentStep={currentStep}
+        linesCount={lines.length}
+      />
     </div>
   );
 }
