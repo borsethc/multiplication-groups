@@ -52,7 +52,7 @@ export function MultiplesPractice({
   const [isRandomMode, setIsRandomMode] = useState<boolean>(false);
   const [isGamified, setIsGamified] = useState<boolean>(true);
 
-  const TOTAL_GAME_TIME = 60; // 1-minute time limit challenge
+  const TOTAL_GAME_TIME = 30; // 30-second time limit challenge
 
   // Blanks & Solved state
   const [blankIndices, setBlankIndices] = useState<number[]>([0, 1, 2, 3, 4, 5]);
@@ -65,7 +65,7 @@ export function MultiplesPractice({
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  // 1-Minute Countdown timing
+  // 30-Second Countdown timing
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number>(TOTAL_GAME_TIME);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -107,7 +107,7 @@ export function MultiplesPractice({
     setIsTimerRunning(false);
   }, []);
 
-  // Handle 1-minute time's up
+  // Handle 30-second time's up
   const handleTimeUp = useCallback(() => {
     stopTimer();
     setIsGameFinished(true);
@@ -128,7 +128,7 @@ export function MultiplesPractice({
     }
   }, [activeTable, isGamified, stopTimer, studentPin]);
 
-  // Start 1-minute countdown timer helper
+  // Start 30-second countdown timer helper
   const startTimer = useCallback(() => {
     stopTimer();
     startTimeRef.current = Date.now();
@@ -154,7 +154,7 @@ export function MultiplesPractice({
     };
   }, []);
 
-  // Initialize or reset a 1-minute run
+  // Initialize or reset a 30-second run
   const resetRun = useCallback(
     (table: number, gamifiedMode: boolean, randomMode: boolean = false) => {
       stopTimer();
@@ -425,7 +425,7 @@ export function MultiplesPractice({
           </button>
         </div>
 
-        {/* Right Stats & 1-Minute Sprint Timer */}
+        {/* Right Stats & 30-Second Sprint Timer */}
         <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
           {isGamified && (
             <div
@@ -434,7 +434,7 @@ export function MultiplesPractice({
                   ? "bg-rose-950/80 border-rose-500 text-rose-300 animate-pulse"
                   : "bg-cyan-950/60 border-cyan-500/40 text-cyan-300"
               }`}
-              title="1-Minute Sprint Time Remaining"
+              title="30-Second Sprint Time Remaining"
             >
               <Timer
                 className={`w-3.5 h-3.5 ${timeLeft <= 10 ? "text-rose-400 animate-bounce" : "text-cyan-400"}`}
@@ -648,7 +648,7 @@ export function MultiplesPractice({
             </motion.div>
           )}
 
-          {/* 1-MINUTE SPRINT RESULTS CARD */}
+          {/* 30-SECOND SPRINT RESULTS CARD */}
           {isGameFinished && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -660,7 +660,7 @@ export function MultiplesPractice({
               </div>
               <div>
                 <h3 className="text-lg sm:text-xl font-black text-white">Time&apos;s Up!</h3>
-                <p className="text-xs text-indigo-300 font-semibold">1-Minute Multiples Sprint Complete</p>
+                <p className="text-xs text-indigo-300 font-semibold">30-Second Multiples Sprint Complete</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5 w-full py-1">
@@ -677,7 +677,7 @@ export function MultiplesPractice({
               {runResult?.isNewHighScore && (
                 <div className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>New 1-Minute High Score!</span>
+                  <span>New 30-Second High Score!</span>
                 </div>
               )}
 
@@ -687,7 +687,7 @@ export function MultiplesPractice({
                   className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg cursor-pointer transition-transform active:scale-95"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  <span>Play Again (1 Min Sprint)</span>
+                  <span>Play Again (30s Sprint)</span>
                 </button>
                 <button
                   onClick={onBackToMenu}
