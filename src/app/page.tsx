@@ -463,30 +463,42 @@ export default function MultiplicationGroupsApp() {
     }
   };
 
-  // Step 2: Tap on a line to add a token/dot
+  // Step 2: 1-Click: Tap on a line to place all tokens for that group
   const handleAddTokenToLine = (groupIndex: number) => {
     initAudio();
     if (currentStep !== 2) return;
 
-    // Sequential filling: Group 1, then Group 2, etc.
-    const activeGroupIndex = lines.findIndex((l) => l.tokens.length < factorB);
-    if (activeGroupIndex !== -1 && groupIndex !== activeGroupIndex) return;
-
     const line = lines[groupIndex];
-    if (!line || line.tokens.length >= factorB) return;
+    if (!line) return;
 
-    playAddToken(line.tokens.length);
+    // Toggle/undo: if line already has all tokens, clicking it clears the line
+    if (line.tokens.length >= factorB) {
+      playRemoveLine();
+      setLines((prev) => {
+        const updated = [...prev];
+        updated[groupIndex] = {
+          ...line,
+          tokens: [],
+        };
+        return updated;
+      });
+      return;
+    }
+
+    // 1-Click: Place ALL factorB tokens on this line!
+    playAddToken(factorB);
+    playGroupComplete(groupIndex);
     setErrorMessage(null);
 
-    const newToken: TokenState = {
-      id: `token-${groupIndex}-${line.tokens.length}-${Date.now()}`,
+    const allTokensForLine: TokenState[] = Array.from({ length: factorB }).map((_, idx) => ({
+      id: `token-${groupIndex}-${idx}-${Date.now()}`,
       isCounted: false,
-    };
+    }));
 
     const updated = [...lines];
     updated[groupIndex] = {
       ...line,
-      tokens: [...line.tokens, newToken],
+      tokens: allTokensForLine,
     };
     setLines(updated);
 
@@ -638,13 +650,7 @@ export default function MultiplicationGroupsApp() {
   const handleSubmitAnswer = (fromMultipleChoice = false, directAnswer?: number) => {
     initAudio();
 
-    // Check Build-First Lock (Item 9)
-    if (isBuildFirstLocked && currentStep < 3 && !isSolved) {
-      playIncorrect();
-      setErrorMessage("🔒 Build First is active! Draw your lines and place dots before typing the product.");
-      return;
-    }
-
+    // Allow entering the correct answer at any time!
     const answerToCheck = directAnswer !== undefined ? directAnswer : parseInt(typedAnswer.trim(), 10);
     if (isNaN(answerToCheck)) return;
 
@@ -850,12 +856,6 @@ export default function MultiplicationGroupsApp() {
       lastKeyTimeRef.current = now;
 
       if (/^[0-9]$/.test(e.key)) {
-        if (isBuildFirstLocked && currentStep < 3 && !isSolved) {
-          playIncorrect();
-          setErrorMessage("🔒 Build First is active! Draw your lines and place dots before typing.");
-          return;
-        }
-
         playHover();
         if (typedAnswer.length < 4 && !isSolved) {
           setTypedAnswer((prev) => prev + e.key);
@@ -934,16 +934,11 @@ export default function MultiplicationGroupsApp() {
           onDeselectAllTables={handleDeselectAllTables}
           isMultipleChoice={isMultipleChoice}
           onToggleMultipleChoice={() => setIsMultipleChoice(!isMultipleChoice)}
-          isBuildLocked={isBuildFirstLocked}
-          onToggleBuildLocked={() => setIsBuildFirstLocked(!isBuildFirstLocked)}
           tableMastery={tableMastery}
           mcMastery={mcMastery}
           onStartPlay={handleStartPlay}
           currentStudent={activeStudent}
           onSwitchPlayer={handleSwitchPlayer}
-          abandonedFact={abandonedFact}
-          onResumeAbandonedFact={handleResumeAbandonedFact}
-          onDiscardAbandonedFact={handleDiscardAbandonedFact}
           onOpenParentView={() => setIsParentViewOpen(true)}
           onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
           onStartMultiples={() => {
@@ -1073,39 +1068,26 @@ export default function MultiplicationGroupsApp() {
                     </span>
                   </div>
 
-                  {/* Item 2: Do not show options until groups & dots are built! */}
-                  {currentStep < 3 && !isSolved ? (
-                    <div className="py-6 px-3 rounded-2xl bg-black/40 border border-white/5 flex flex-col items-center text-center gap-2 text-white/60">
-                      <Lock className="w-6 h-6 text-amber-400 animate-pulse" />
-                      <p className="text-xs font-bold text-white/80">
-                        Build groups & dots first
-                      </p>
-                      <p className="text-[11px] text-white/50">
-                        Build your groups and dots to unlock multiple choice options!
-                      </p>
-                    </div>
-                  ) : (
-                    /* Item 3 & 4: Options shown with permanent elimination and 1-click evaluation */
-                    <div className="grid grid-cols-2 gap-2">
-                      {currentMcOptions.map((opt) => {
-                        const isEliminated = eliminatedMcOptions.includes(opt);
-                        return (
-                          <button
-                            key={opt}
-                            onClick={() => handleMultipleChoiceClick(opt)}
-                            disabled={isSolved || isEliminated}
-                            className={`h-12 sm:h-14 rounded-2xl font-black text-lg sm:text-xl transition-all cursor-pointer flex items-center justify-center border ${
-                              isEliminated
-                                ? "bg-red-500/10 border-red-500/20 text-white/20 line-through cursor-not-allowed"
-                                : "bg-white/5 hover:bg-white/15 active:scale-95 border-white/10 text-white hover:border-cyan-500/50"
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Multiple Choice options unlocked and clickable at any time */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {currentMcOptions.map((opt) => {
+                      const isEliminated = eliminatedMcOptions.includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          onClick={() => handleMultipleChoiceClick(opt)}
+                          disabled={isSolved || isEliminated}
+                          className={`h-12 sm:h-14 rounded-2xl font-black text-lg sm:text-xl transition-all cursor-pointer flex items-center justify-center border ${
+                            isEliminated
+                              ? "bg-red-500/10 border-red-500/20 text-white/20 line-through cursor-not-allowed"
+                              : "bg-white/5 hover:bg-white/15 active:scale-95 border-white/10 text-white hover:border-cyan-500/50"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   <p className="text-[10px] text-white/40 text-center">
                     Clean recall solve required afterwards to build table mastery
@@ -1125,7 +1107,7 @@ export default function MultiplicationGroupsApp() {
                       setTypedAnswer(val);
                     }}
                     onSubmit={() => handleSubmitAnswer(false)}
-                    disabled={isSolved || (isBuildFirstLocked && currentStep < 3)}
+                    disabled={isSolved}
                     onKeyPressSound={playHover}
                   />
                 </div>

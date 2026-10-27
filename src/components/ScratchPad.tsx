@@ -76,14 +76,14 @@ export function ScratchPad({
   const isLarge = !isVeryLarge && (factorA >= 4 || factorB >= 5 || (factorA * factorB >= 15));
   const isCompact = isVeryLarge || isLarge || factorA >= 3;
 
-  // Mobile Spacing (< 768px):
+  // Mobile Spacing (< 768px): Optimized to guarantee ZERO scrolling on iPhone
   const mobileSpacing = is3Columns || isVeryLarge
-    ? Math.max(12, Math.min(18, Math.floor(135 / factorB)))
+    ? Math.max(10, Math.min(15, Math.floor(105 / factorB)))
     : isLarge
-    ? Math.max(15, Math.min(22, Math.floor(180 / factorB)))
-    : Math.max(20, Math.min(30, Math.floor(230 / factorB)));
+    ? Math.max(13, Math.min(19, Math.floor(140 / factorB)))
+    : Math.max(16, Math.min(24, Math.floor(180 / factorB)));
 
-  const mobileLineWidth = Math.max(55, factorB * mobileSpacing + (is3Columns ? 8 : 12));
+  const mobileLineWidth = Math.max(50, factorB * mobileSpacing + (is3Columns ? 6 : 10));
 
   // Tablet & iPad Spacing (>= 768px):
   // When 3 columns (e.g. 9x9): line width is ~188px so 3 lines + 2 plus signs = ~588px (easily fits 680px canvas)
@@ -97,17 +97,17 @@ export function ScratchPad({
 
   // Scaled visual styles
   const dotSizeClass = is3Columns
-    ? "w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[7px] md:text-[9px]"
+    ? "w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-5 md:h-5 text-[7px] md:text-[9px]"
     : isVeryLarge
-    ? "w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-[8px] md:text-[10px]"
+    ? "w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-6 md:h-6 text-[8px] md:text-[10px]"
     : isLarge
     ? "w-4 h-4 sm:w-5 sm:h-5 md:w-7 md:h-7 text-[9px] md:text-xs"
     : "w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-[10px] md:text-sm";
 
   const emptySpotSizeClass = is3Columns
-    ? "w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5"
+    ? "w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-5 md:h-5"
     : isVeryLarge
-    ? "w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6"
+    ? "w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-6 md:h-6"
     : isLarge
     ? "w-4 h-4 sm:w-5 sm:h-5 md:w-7 md:h-7"
     : "w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8";
@@ -217,52 +217,7 @@ export function ScratchPad({
           backgroundSize: isPaper ? "100% 26px" : "20px 20px",
         }}
       >
-        {/* TOP WORKSHEET TITLE BAR */}
-        <div
-          className={`w-full flex items-center justify-between px-2.5 py-1.5 md:px-4 md:py-2 z-20 shrink-0 border-b ${
-            isPaper
-              ? "bg-[#f2efe6]/90 border-[#dcd7cb] text-[#475569]"
-              : "bg-white/[0.03] border-white/5 text-white/50"
-          }`}
-        >
-          {/* Handout Title with Explicit Math Fact & Main Menu Button */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {onBackToMenu && (
-              <button
-                type="button"
-                onClick={onBackToMenu}
-                className="flex items-center gap-1 px-2 py-1 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/25 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer shadow-sm mr-0.5"
-                title="Return to Main Menu"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="font-bold">Main Menu</span>
-              </button>
-            )}
-            <span className="font-serif italic font-bold text-xs sm:text-sm tracking-tight text-current hidden xs:inline">
-              Worksheet:
-            </span>
-            <span className="font-mono font-black text-xs sm:text-sm md:text-base text-cyan-400 bg-cyan-950/70 px-2 py-0.5 rounded-lg border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.25)]">
-              {factorA} × {factorB} = ?
-            </span>
-          </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
-
-            {/* Compact Paper / Slate Theme Toggle */}
-            <button
-              onClick={() => setPaperTheme(isPaper ? "slate" : "paper")}
-              className={`px-2 py-1 rounded-lg border text-[11px] md:text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
-                isPaper
-                  ? "bg-white/80 border-[#d2ccc0] text-[#1e293b] hover:bg-white shadow-sm"
-                  : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
-              }`}
-              title={isPaper ? "Switch to Dark Slate" : "Switch to Classroom Paper"}
-            >
-              {isPaper ? <Moon className="w-3.5 h-3.5 text-indigo-600" /> : <FileText className="w-3.5 h-3.5 text-amber-300" />}
-              <span className="font-semibold hidden xs:inline">{isPaper ? "Dark Mode" : "Paper"}</span>
-            </button>
-          </div>
-        </div>
 
         {/* PROMINENT STEP BANNER AT TOP OF SCRATCH PAD */}
         <div className="w-full px-2.5 md:px-4 pt-1.5 md:pt-2 pb-1 z-20 shrink-0">
@@ -307,7 +262,7 @@ export function ScratchPad({
                 <>
                   <div className="w-3.5 h-3.5 md:w-4 md:h-4 rounded-full bg-purple-400 shrink-0" />
                   <span>
-                    STEP 2: Look at 2nd Factor → How many in each group? Place them on each line!
+                    STEP 2: Tap each line to place all {factorB} dots in 1 click!
                   </span>
                 </>
               )}
@@ -512,20 +467,15 @@ export function ScratchPad({
           >
             <AnimatePresence>
               {lines.map((line, groupIdx) => {
-                // SEQUENTIAL ANTI-CHEAT:
-                // In Step 2, students MUST fill groups in order (Group 1, then Group 2, etc.)
-                // Students CANNOT skip to the last group to cheat!
-                const activeGroupIndex = lines.findIndex((l) => l.tokens.length < factorB);
-                const isCurrentActiveLine = groupIdx === activeGroupIndex;
-                const isFutureLine = activeGroupIndex !== -1 && groupIdx > activeGroupIndex;
-                const canAddToken = isLineReadyForTokens && currentStep === 2 && isCurrentActiveLine && line.tokens.length < factorB;
+                // 1-Click placement: Tap any line to place all factorB dots at once!
+                const isLineFilled = line.tokens.length >= factorB;
+                const isCurrentActiveLine = !isLineFilled;
+                const canAddToken = isLineReadyForTokens && currentStep === 2 && !isLineFilled;
 
                 return (
                   <div
                     key={line.id}
-                    className={`flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5 transition-opacity duration-200 ${
-                      currentStep === 2 && isFutureLine ? "opacity-40 pointer-events-none" : "opacity-100"
-                    }`}
+                    className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5 transition-opacity duration-200 opacity-100"
                   >
                     {/* PLUS SIGN (Matches worksheet array styling: "+" connects lines) */}
                     {groupIdx > 0 && (

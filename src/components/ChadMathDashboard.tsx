@@ -16,16 +16,11 @@ interface ChadMathDashboardProps {
   onDeselectAllTables: () => void;
   isMultipleChoice: boolean;
   onToggleMultipleChoice: () => void;
-  isBuildLocked: boolean;
-  onToggleBuildLocked: () => void;
   tableMastery: Record<number, number>; // Clean Recall mastery (2..9 -> 0..1)
   mcMastery?: Record<number, number>; // Multiple Choice mastery (2..9 -> 0..1)
   onStartPlay: () => void;
   currentStudent?: StudentProfile | null;
   onSwitchPlayer?: () => void;
-  abandonedFact?: { a: number; b: number } | null;
-  onResumeAbandonedFact?: () => void;
-  onDiscardAbandonedFact?: () => void;
   onOpenParentView?: () => void;
   onOpenAccessibility?: () => void;
   onStartMultiples?: () => void;
@@ -42,16 +37,11 @@ export function ChadMathDashboard({
   onDeselectAllTables,
   isMultipleChoice,
   onToggleMultipleChoice,
-  isBuildLocked,
-  onToggleBuildLocked,
   tableMastery,
   mcMastery = {},
   onStartPlay,
   currentStudent,
   onSwitchPlayer,
-  abandonedFact,
-  onResumeAbandonedFact,
-  onDiscardAbandonedFact,
   onOpenParentView,
   onOpenAccessibility,
   onStartMultiples,
@@ -189,40 +179,6 @@ export function ChadMathDashboard({
           </div>
         </div>
 
-        {/* RESUME ABANDONED FACT PROMPT (Item 14) */}
-        {abandonedFact && onResumeAbandonedFact && (
-          <div className="w-full p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 animate-in fade-in duration-300">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <div>
-                <span className="text-xs font-bold text-amber-300 block leading-tight">
-                  Unfinished Fact in Progress: {abandonedFact.a} × {abandonedFact.b}
-                </span>
-                <span className="text-[10px] text-white/50">
-                  Pick up right where you left off
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={onResumeAbandonedFact}
-                className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-black text-xs transition-colors cursor-pointer shadow-md"
-              >
-                Resume
-              </button>
-              {onDiscardAbandonedFact && (
-                <button
-                  onClick={onDiscardAbandonedFact}
-                  className="px-2 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-[10px] transition-colors cursor-pointer"
-                  title="Discard and re-drill later"
-                >
-                  Discard
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* DAILY SESSIONS PROGRESS WITH EXPLICIT EXPLANATION (Item 13) */}
         <div className="w-full p-2 sm:p-2.5 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
           <div className="flex flex-col">
@@ -249,53 +205,6 @@ export function ChadMathDashboard({
                 title={`Fact ${idx + 1} of 5`}
               />
             ))}
-          </div>
-        </div>
-
-        {/* FACTOR MASTERY: RECALL MASTERY VS RECOGNITION (Item 5, 6, & Progress Bars) */}
-        <div className="w-full bg-white/[0.03] p-2 sm:p-2.5 rounded-2xl border border-white/10 flex flex-col gap-1.5">
-          <div className="w-full flex items-center justify-between px-0.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white/60 font-bold">
-                Free Recall Mastery
-              </span>
-              <span className={`text-[10px] sm:text-xs font-black ${recallTier.text}`}>
-                {overallRecallPercent}%
-              </span>
-              {overallMcPercent > 0 && (
-                <span className="text-[9px] text-purple-300/80 font-semibold ml-1">
-                  (MC Recognition: {overallMcPercent}%)
-                </span>
-              )}
-            </div>
-
-            {/* Red to Yellow to Green Color Legend */}
-            <div className="flex items-center gap-2 text-[8px] sm:text-[9px] font-semibold text-white/40">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.8)]" />
-                <span>&lt;40%</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
-                <span>40–79%</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                <span>80%+</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Master Progress Bar (Red to Yellow to Green Gradient) */}
-          <div className="w-full h-2 sm:h-2.5 bg-black/50 rounded-full overflow-hidden p-0.5 border border-white/10">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{
-                width: `${Math.max(overallRecallPercent, overallRecallPercent > 0 ? 5 : 0)}%`,
-              }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ${recallTier.gradient}`}
-            />
           </div>
         </div>
 
@@ -371,12 +280,11 @@ export function ChadMathDashboard({
           </div>
         </div>
 
-        {/* SCAFFOLD & LOCK TOGGLES (Item 1 & Item 9) */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-white/5">
-          {/* Multiple Choice (Recognition Scaffold) Toggle (Item 1) */}
+        {/* MULTIPLE CHOICE SCAFFOLD TOGGLE */}
+        <div className="w-full pt-1 border-t border-white/5">
           <button
             onClick={onToggleMultipleChoice}
-            className={`p-2 rounded-xl border flex items-center justify-between text-left transition-colors cursor-pointer ${
+            className={`w-full p-2 rounded-xl border flex items-center justify-between text-left transition-colors cursor-pointer ${
               isMultipleChoice
                 ? "bg-purple-950/40 border-purple-500/40 text-purple-200"
                 : "bg-white/[0.03] border-white/10 text-white/60 hover:text-white"
@@ -384,41 +292,15 @@ export function ChadMathDashboard({
           >
             <div>
               <span className="text-xs font-bold block text-white">
-                Multiple Choice: {isMultipleChoice ? "ON" : "OFF"}
+                Multiple Choice Mode: {isMultipleChoice ? "ON" : "OFF"}
               </span>
               <span className="text-[9px] text-amber-300 font-bold block">
-                Scaffold — recognition only, not mastery
+                Recognition scaffold — clean recall required for table mastery
               </span>
             </div>
             <div
               className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center ${
                 isMultipleChoice ? "bg-purple-600 justify-end" : "bg-white/20 justify-start"
-              }`}
-            >
-              <div className="w-3 h-3 rounded-full bg-white shadow-sm" />
-            </div>
-          </button>
-
-          {/* Build-First Lock Toggle (Item 9) */}
-          <button
-            onClick={onToggleBuildLocked}
-            className={`p-2 rounded-xl border flex items-center justify-between text-left transition-colors cursor-pointer ${
-              isBuildLocked
-                ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200"
-                : "bg-white/[0.03] border-white/10 text-white/60 hover:text-white"
-            }`}
-          >
-            <div>
-              <span className="text-xs font-bold block text-white">
-                Build First, Answer Second: {isBuildLocked ? "ON" : "OFF"}
-              </span>
-              <span className="text-[9px] text-emerald-300/80 block">
-                Must build model before typing
-              </span>
-            </div>
-            <div
-              className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center ${
-                isBuildLocked ? "bg-emerald-600 justify-end" : "bg-white/20 justify-start"
               }`}
             >
               <div className="w-3 h-3 rounded-full bg-white shadow-sm" />

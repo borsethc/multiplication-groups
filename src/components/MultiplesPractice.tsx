@@ -43,8 +43,10 @@ export function MultiplesPractice({
   const [selectedTable, setSelectedTable] = useState<number>(initialTable);
   const [isGamified, setIsGamified] = useState<boolean>(true);
 
+  const TOTAL_GAME_TIME = 60; // 1-minute time limit challenge
+
   // Blanks & Solved state
-  const [blankIndices, setBlankIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const [blankIndices, setBlankIndices] = useState<number[]>([0, 1, 2, 3, 4, 5]);
   const [solvedIndices, setSolvedIndices] = useState<number[]>([]);
   const [activeBlankIndex, setActiveBlankIndex] = useState<number>(0);
   const [userInputs, setUserInputs] = useState<Record<number, string>>({});
@@ -54,9 +56,9 @@ export function MultiplesPractice({
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  // Speed run timing
+  // 1-Minute Countdown timing
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(TOTAL_GAME_TIME);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const stepStartTimeRef = useRef<number>(Date.now());
@@ -64,7 +66,9 @@ export function MultiplesPractice({
 
   // Points & Speed bonus toasts
   const [score, setScore] = useState<number>(0);
+  const scoreRef = useRef<number>(0);
   const [streak, setStreak] = useState<number>(0);
+  const [roundsCompleted, setRoundsCompleted] = useState<number>(0);
   const [speedToast, setSpeedToast] = useState<{ text: string; bonus: number; key: number } | null>(null);
 
   // Personal Record
@@ -94,7 +98,28 @@ export function MultiplesPractice({
     setIsTimerRunning(false);
   }, []);
 
-  // Start timer helper
+  // Handle 1-minute time's up
+  const handleTimeUp = useCallback(() => {
+    stopTimer();
+    setIsGameFinished(true);
+    setConfettiTrigger(true);
+    onPlaySuccess?.();
+    onFactSolved?.();
+
+    const finalScoreTotal = scoreRef.current;
+    if (isGamified) {
+      const res = saveMultiplesRecord(studentPin, selectedTable, finalScoreTotal, TOTAL_GAME_TIME);
+      setRecord(res.record);
+      setRunResult({
+        finalTime: TOTAL_GAME_TIME,
+        finalScore: finalScoreTotal,
+        isNewBestTime: false,
+        isNewHighScore: res.isNewHighScore,
+      });
+    }
+  }, [isGamified, onFactSolved, onPlaySuccess, selectedTable, stopTimer, studentPin]);
+
+  // Start 1-minute countdown timer helper
   const startTimer = useCallback(() => {
     stopTimer();
     startTimeRef.current = Date.now();
@@ -102,11 +127,15 @@ export function MultiplesPractice({
     setIsTimerRunning(true);
     timerRef.current = setInterval(() => {
       if (startTimeRef.current) {
-        const seconds = (Date.now() - startTimeRef.current) / 1000;
-        setElapsedTime(seconds);
+        const elapsed = (Date.now() - startTimeRef.current) / 1000;
+        const remaining = Math.max(0, TOTAL_GAME_TIME - elapsed);
+        setTimeLeft(remaining);
+        if (remaining <= 0) {
+          handleTimeUp();
+        }
       }
     }, 100);
-  }, [stopTimer]);
+  }, [handleTimeUp, stopTimer]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -116,7 +145,7 @@ export function MultiplesPractice({
     };
   }, []);
 
-  // Initialize or reset a run: exactly 6 skips, 2 blanks, 4 shown
+  // Initialize or reset a 1-minute run
   const resetRun = useCallback(
     (table: number, gamifiedMode: boolean) => {
       stopTimer();
@@ -124,7 +153,7 @@ export function MultiplesPractice({
         clearTimeout(autoAdvanceTimerRef.current);
         autoAdvanceTimerRef.current = null;
       }
-      setElapsedTime(0);
+      setTimeLeft(TOTAL_GAME_TIME);
       setIsGameFinished(false);
       setConfettiTrigger(false);
       setFeedbackMessage(null);
@@ -132,6 +161,10 @@ export function MultiplesPractice({
       setSpeedToast(null);
       setSolvedIndices([]);
       setUserInputs({});
+      setRoundsCompleted(0);
+      setScore(0);
+      scoreRef.current = 0;
+      setStreak(0);
 
       // Pick exactly 2 random blank indices out of 6 skips (0..5), leaving 4 shown
       const candidates = [0, 1, 2, 3, 4, 5];
@@ -140,8 +173,6 @@ export function MultiplesPractice({
 
       setBlankIndices(chosenBlanks);
       setActiveBlankIndex(chosenBlanks[0]);
-      setScore(0);
-      setStreak(0);
 
       if (gamifiedMode) {
         startTimer();
@@ -156,53 +187,32 @@ export function MultiplesPractice({
     resetRun(selectedTable, isGamified);
   }, [selectedTable, isGamified, resetRun]);
 
-  // Complete the entire run
-  const handleCompleteRun = useCallback(
-    (finalScoreTotal: number) => {
-      stopTimer();
-      setIsGameFinished(true);
-      setConfettiTrigger(true);
-      onPlaySuccess?.();
-      onFactSolved?.();
-
-      const finalTimeSeconds = Number(elapsedTime.toFixed(1));
-
-      if (isGamified) {
-        // Save and check high scores
-        const res = saveMultiplesRecord(studentPin, selectedTable, finalScoreTotal, finalTimeSeconds);
-        setRecord(res.record);
-        setRunResult({
-          finalTime: finalTimeSeconds,
-          finalScore: finalScoreTotal,
-          isNewBestTime: res.isNewBestTime,
-          isNewHighScore: res.isNewHighScore,
-        });
-      }
-
-      // Automatically advance to the next question without prompting!
-      if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
-      autoAdvanceTimerRef.current = setTimeout(() => {
-        resetRun(selectedTable, isGamified);
-      }, 1400);
-    },
-    [elapsedTime, isGamified, onFactSolved, onPlaySuccess, resetRun, selectedTable, stopTimer, studentPin]
-  );
-
-  // Auto-advance to the next unsolved multiple
+  // Auto-advance to the next unsolved multiple or next round within the 1 minute
   const advanceToNextBlank = useCallback(
-    (newSolved: number[], currentScore: number) => {
+    (newSolved: number[]) => {
       const remaining = blankIndices.filter((idx) => !newSolved.includes(idx));
       if (remaining.length === 0) {
-        // All multiples completed!
-        handleCompleteRun(currentScore);
+        // Round cleared! Increment rounds and load next 6-skip set immediately
+        setRoundsCompleted((prev) => prev + 1);
+        onPlaySuccess?.();
+
+        const candidates = [0, 1, 2, 3, 4, 5];
+        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+        const chosenBlanks = shuffled.slice(0, 2).sort((a, b) => a - b);
+
+        setBlankIndices(chosenBlanks);
+        setSolvedIndices([]);
+        setUserInputs({});
+        setActiveBlankIndex(chosenBlanks[0]);
+        stepStartTimeRef.current = Date.now();
       } else {
-        // Next multiple
+        // Next multiple within current round
         const nextIdx = remaining[0];
         setActiveBlankIndex(nextIdx);
         stepStartTimeRef.current = Date.now();
       }
     },
-    [blankIndices, handleCompleteRun]
+    [blankIndices, onPlaySuccess]
   );
 
   // Validate value entered for current active blank
@@ -238,6 +248,7 @@ export function MultiplesPractice({
         const addedScore = 50 + speedBonus;
         const newScore = score + addedScore;
         setScore(newScore);
+        scoreRef.current = newScore;
         setStreak((s) => s + 1);
         setSpeedToast({ text: speedLabel, bonus: speedBonus, key: Date.now() });
 
@@ -247,8 +258,8 @@ export function MultiplesPractice({
         setSolvedIndices(updatedSolved);
         setFeedbackMessage(null);
 
-        // Auto-advance to next multiple immediately!
-        advanceToNextBlank(updatedSolved, newScore);
+        // Auto-advance to next multiple or next round immediately!
+        advanceToNextBlank(updatedSolved);
       } else {
         // Incorrect
         if (valStr.length >= 2) {
@@ -390,24 +401,29 @@ export function MultiplesPractice({
           </button>
         </div>
 
-        {/* Right Stats & Speed Run Timer */}
-        <div className="flex items-center gap-3 text-xs sm:text-sm">
+        {/* Right Stats & 1-Minute Sprint Timer */}
+        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
           {isGamified && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-mono font-black shadow-sm">
-              <Timer className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: "4s" }} />
-              <span>{elapsedTime.toFixed(1)}s</span>
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border font-mono font-black shadow-sm transition-colors ${
+                timeLeft <= 10
+                  ? "bg-rose-950/80 border-rose-500 text-rose-300 animate-pulse"
+                  : "bg-cyan-950/60 border-cyan-500/40 text-cyan-300"
+              }`}
+              title="1-Minute Sprint Time Remaining"
+            >
+              <Timer
+                className={`w-3.5 h-3.5 ${timeLeft <= 10 ? "text-rose-400 animate-bounce" : "text-cyan-400"}`}
+              />
+              <span>
+                {Math.floor(timeLeft / 60)}:{(Math.floor(timeLeft % 60)).toString().padStart(2, "0")}
+              </span>
             </div>
           )}
 
-          {record && isGamified && (
-            <div
-              className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[11px] text-yellow-300 font-semibold"
-              title="Personal Best for this table"
-            >
-              <Award className="w-3 h-3 text-yellow-400" />
-              <span>Best: {record.bestTimeSeconds}s</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-cyan-300">
+            <span>Rounds: {roundsCompleted}</span>
+          </div>
 
           <div className="flex items-center gap-1 text-yellow-400 font-bold">
             <Trophy className="w-3.5 h-3.5" />
@@ -585,38 +601,53 @@ export function MultiplesPractice({
             </motion.div>
           )}
 
-          {/* ROUND COMPLETE BANNER (Auto-advancing to next question without prompting) */}
+          {/* 1-MINUTE SPRINT RESULTS CARD */}
           {isGameFinished && (
             <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="mt-3 py-2 px-5 rounded-2xl bg-emerald-950/70 border border-emerald-500/50 shadow-xl flex items-center justify-between gap-3 text-white max-w-lg w-full cursor-pointer"
-              onClick={() => {
-                if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
-                resetRun(selectedTable, isGamified);
-              }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-2 p-4 sm:p-5 rounded-3xl bg-[#10121b]/95 border-2 border-indigo-500/50 shadow-2xl flex flex-col items-center gap-3 text-white max-w-md w-full text-center backdrop-blur-xl"
             >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
-                  <Check className="w-5 h-5 stroke-[3]" />
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-2xl shadow-lg">
+                ⏱️
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-white">Time&apos;s Up!</h3>
+                <p className="text-xs text-indigo-300 font-semibold">1-Minute Multiples Sprint Complete</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 w-full py-1">
+                <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-wider text-white/50 font-bold">Final Score</span>
+                  <span className="text-2xl font-black text-yellow-400 font-mono">{score}</span>
                 </div>
-                <div className="text-left">
-                  <div className="text-xs sm:text-sm font-black text-emerald-300 flex items-center gap-1.5">
-                    <span>Round Complete!</span>
-                    {runResult?.isNewBestTime && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40">
-                        ⭐ New Best!
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-white/70">
-                    {runResult ? `${runResult.finalTime}s • +${runResult.finalScore} pts` : "Great skip-counting!"}
-                  </div>
+                <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-wider text-white/50 font-bold">Rounds Cleared</span>
+                  <span className="text-2xl font-black text-emerald-400 font-mono">{roundsCompleted}</span>
                 </div>
               </div>
 
-              <div className="text-xs font-bold text-cyan-300 flex items-center gap-1 animate-pulse">
-                <span>Next question loading...</span>
+              {runResult?.isNewHighScore && (
+                <div className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>New 1-Minute High Score!</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 w-full pt-1">
+                <button
+                  onClick={() => resetRun(selectedTable, isGamified)}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg cursor-pointer transition-transform active:scale-95"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Play Again (1 Min Sprint)</span>
+                </button>
+                <button
+                  onClick={onBackToMenu}
+                  className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/10 transition-colors cursor-pointer"
+                >
+                  Main Menu
+                </button>
               </div>
             </motion.div>
           )}

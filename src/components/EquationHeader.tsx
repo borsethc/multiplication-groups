@@ -41,8 +41,8 @@ export function EquationHeader({
   const factorAGreen = isLinesComplete || isSolved;
   const factorBGreen = isTokensComplete || isSolved;
 
-  // Model must be built (Step 3 or later) if build-lock is on
-  const isInputLocked = isBuildLocked && currentStep < 3 && !isSolved;
+  // Allow entering the correct answer at any time!
+  const isInputLocked = false;
 
   return (
     <div className="w-full flex flex-col items-center justify-center shrink-0 select-none py-0.5 sm:py-1">
