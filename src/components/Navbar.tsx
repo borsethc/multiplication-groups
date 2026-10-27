@@ -74,11 +74,6 @@ export function Navbar({
           </button>
         )}
 
-        {/* Pinned Math Fact in Navbar */}
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-mono font-black text-xs sm:text-sm shadow-[0_0_12px_rgba(6,182,212,0.2)]">
-          <span>{factorA} × {factorB} = ?</span>
-        </div>
-
         {/* RETURN TO MAIN MENU BUTTON */}
         {onBackToDashboard && (
           <button

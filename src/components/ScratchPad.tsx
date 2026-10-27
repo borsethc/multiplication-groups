@@ -428,37 +428,6 @@ export function ScratchPad({
           </svg>
         )}
 
-        {/* EMPTY CUE (When 0 lines drawn) */}
-        {lines.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 md:p-6 pointer-events-none z-10">
-            <div
-              className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl flex items-center justify-center mb-2 md:mb-3 shadow-lg ${
-                isPaper
-                  ? "bg-[#1e3a8a]/10 border border-[#1e3a8a]/20 text-[#1e3a8a]"
-                  : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]"
-              }`}
-            >
-              <span className="text-2xl md:text-3xl">✏️</span>
-            </div>
-            <div className="flex items-center gap-2 mb-1 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono font-black text-xs sm:text-sm shadow-sm">
-              <span>Look at the Math Fact: {factorA} × {factorB} = ?</span>
-            </div>
-            <p
-              className={`text-sm sm:text-base md:text-xl font-black tracking-wide ${
-                isPaper ? "text-[#0f172a]" : "text-white"
-              }`}
-            >
-              How Many Groups Do You Need?
-            </p>
-            <p
-              className={`text-xs md:text-sm max-w-sm mt-1 leading-relaxed ${
-                isPaper ? "text-[#334155] font-semibold" : "text-slate-200 font-medium"
-              }`}
-            >
-              Look at the 1st Factor to determine the number of equal groups. Draw horizontal lines or tap "+ Add Group Line" to build them!
-            </p>
-          </div>
-        )}
 
         {/* WORKSHEET 2D ARRAY CONTAINER (ZERO SCROLLING, FITS ENTIRE SCREEN) */}
         <div className="relative z-10 w-full flex-1 p-0.5 sm:p-1.5 md:p-2 flex flex-col items-center justify-center overflow-hidden">
