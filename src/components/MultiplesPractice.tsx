@@ -40,7 +40,16 @@ export function MultiplesPractice({
   onFactSolved,
   initialTable = 2,
 }: MultiplesPracticeProps) {
+  const onPlaySuccessRef = useRef(onPlaySuccess);
+  onPlaySuccessRef.current = onPlaySuccess;
+  const onPlayIncorrectRef = useRef(onPlayIncorrect);
+  onPlayIncorrectRef.current = onPlayIncorrect;
+  const onFactSolvedRef = useRef(onFactSolved);
+  onFactSolvedRef.current = onFactSolved;
+
   const [selectedTable, setSelectedTable] = useState<number>(initialTable);
+  const [activeTable, setActiveTable] = useState<number>(initialTable);
+  const [isRandomMode, setIsRandomMode] = useState<boolean>(false);
   const [isGamified, setIsGamified] = useState<boolean>(true);
 
   const TOTAL_GAME_TIME = 60; // 1-minute time limit challenge
@@ -81,13 +90,13 @@ export function MultiplesPractice({
   } | null>(null);
 
   const tables = [2, 3, 4, 5, 6, 7, 8, 9];
-  // Limit to 6 skips: factors 1 to 6
-  const multiples = Array.from({ length: 6 }, (_, i) => (i + 1) * selectedTable);
+  // Limit to 6 skips: factors 1 to 6 for the current active table
+  const multiples = Array.from({ length: 6 }, (_, i) => (i + 1) * activeTable);
 
   // Load record whenever table or studentPin changes
   useEffect(() => {
-    setRecord(getMultiplesRecord(studentPin, selectedTable));
-  }, [selectedTable, studentPin]);
+    setRecord(getMultiplesRecord(studentPin, activeTable));
+  }, [activeTable, studentPin]);
 
   // Stop timer helper
   const stopTimer = useCallback(() => {
@@ -103,12 +112,12 @@ export function MultiplesPractice({
     stopTimer();
     setIsGameFinished(true);
     setConfettiTrigger(true);
-    onPlaySuccess?.();
-    onFactSolved?.();
+    onPlaySuccessRef.current?.();
+    onFactSolvedRef.current?.();
 
     const finalScoreTotal = scoreRef.current;
     if (isGamified) {
-      const res = saveMultiplesRecord(studentPin, selectedTable, finalScoreTotal, TOTAL_GAME_TIME);
+      const res = saveMultiplesRecord(studentPin, activeTable, finalScoreTotal, TOTAL_GAME_TIME);
       setRecord(res.record);
       setRunResult({
         finalTime: TOTAL_GAME_TIME,
@@ -117,7 +126,7 @@ export function MultiplesPractice({
         isNewHighScore: res.isNewHighScore,
       });
     }
-  }, [isGamified, onFactSolved, onPlaySuccess, selectedTable, stopTimer, studentPin]);
+  }, [activeTable, isGamified, stopTimer, studentPin]);
 
   // Start 1-minute countdown timer helper
   const startTimer = useCallback(() => {
@@ -147,7 +156,7 @@ export function MultiplesPractice({
 
   // Initialize or reset a 1-minute run
   const resetRun = useCallback(
-    (table: number, gamifiedMode: boolean) => {
+    (table: number, gamifiedMode: boolean, randomMode: boolean = false) => {
       stopTimer();
       if (autoAdvanceTimerRef.current) {
         clearTimeout(autoAdvanceTimerRef.current);
@@ -166,6 +175,11 @@ export function MultiplesPractice({
       scoreRef.current = 0;
       setStreak(0);
 
+      const tableToUse = randomMode
+        ? tables[Math.floor(Math.random() * tables.length)]
+        : table;
+      setActiveTable(tableToUse);
+
       // Pick exactly 2 random blank indices out of 6 skips (0..5), leaving 4 shown
       const candidates = [0, 1, 2, 3, 4, 5];
       const shuffled = [...candidates].sort(() => Math.random() - 0.5);
@@ -182,19 +196,27 @@ export function MultiplesPractice({
     [startTimer, stopTimer]
   );
 
-  // Trigger reset when table or gamify mode changes
+  // Trigger reset ONLY when table selection, mode, or gamification changes
   useEffect(() => {
-    resetRun(selectedTable, isGamified);
-  }, [selectedTable, isGamified, resetRun]);
+    resetRun(selectedTable, isGamified, isRandomMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTable, isGamified, isRandomMode]);
 
-  // Auto-advance to the next unsolved multiple or next round within the 1 minute
+  // Auto-advance to the next unsolved multiple OR shuffle ONLY after BOTH blanks are answered!
   const advanceToNextBlank = useCallback(
     (newSolved: number[]) => {
       const remaining = blankIndices.filter((idx) => !newSolved.includes(idx));
       if (remaining.length === 0) {
-        // Round cleared! Increment rounds and load next 6-skip set immediately
+        // BOTH blanks are answered! Increment rounds cleared & generate next 6-skip set
         setRoundsCompleted((prev) => prev + 1);
-        onPlaySuccess?.();
+        onPlaySuccessRef.current?.();
+
+        // If in Random Mode, randomly rotate among all factors 2..9
+        if (isRandomMode) {
+          const otherTables = [2, 3, 4, 5, 6, 7, 8, 9].filter((t) => t !== activeTable);
+          const nextTable = otherTables[Math.floor(Math.random() * otherTables.length)];
+          setActiveTable(nextTable);
+        }
 
         const candidates = [0, 1, 2, 3, 4, 5];
         const shuffled = [...candidates].sort(() => Math.random() - 0.5);
@@ -206,13 +228,13 @@ export function MultiplesPractice({
         setActiveBlankIndex(chosenBlanks[0]);
         stepStartTimeRef.current = Date.now();
       } else {
-        // Next multiple within current round
+        // Only 1 blank was solved: advance to the 2nd blank WITHOUT shuffling!
         const nextIdx = remaining[0];
         setActiveBlankIndex(nextIdx);
         stepStartTimeRef.current = Date.now();
       }
     },
-    [blankIndices, onPlaySuccess]
+    [activeTable, blankIndices, isRandomMode]
   );
 
   // Validate value entered for current active blank
@@ -221,7 +243,7 @@ export function MultiplesPractice({
       if (isGameFinished || activeBlankIndex === null) return;
 
       const num = parseInt(valStr, 10);
-      const expected = (activeBlankIndex + 1) * selectedTable;
+      const expected = (activeBlankIndex + 1) * activeTable;
 
       if (num === expected) {
         // Correct answer!
@@ -252,20 +274,20 @@ export function MultiplesPractice({
         setStreak((s) => s + 1);
         setSpeedToast({ text: speedLabel, bonus: speedBonus, key: Date.now() });
 
-        onPlaySuccess?.();
+        onPlaySuccessRef.current?.();
 
         const updatedSolved = [...solvedIndices, activeBlankIndex];
         setSolvedIndices(updatedSolved);
         setFeedbackMessage(null);
 
-        // Auto-advance to next multiple or next round immediately!
+        // Advance to 2nd blank, or shuffle to next round if BOTH blanks are now solved!
         advanceToNextBlank(updatedSolved);
       } else {
         // Incorrect
         if (valStr.length >= 2) {
-          onPlayIncorrect?.();
+          onPlayIncorrectRef.current?.();
           setStreak(0);
-          setFeedbackMessage(`Not quite! Look at the skip-count pattern: adds +${selectedTable}`);
+          setFeedbackMessage(`Not quite! Look at the skip-count pattern: adds +${activeTable}`);
           // Clear current input so student can re-type immediately
           setUserInputs((prev) => ({ ...prev, [activeBlankIndex]: "" }));
         }
@@ -273,13 +295,11 @@ export function MultiplesPractice({
     },
     [
       activeBlankIndex,
+      activeTable,
       advanceToNextBlank,
       isGameFinished,
       isGamified,
-      onPlayIncorrect,
-      onPlaySuccess,
       score,
-      selectedTable,
       solvedIndices,
     ]
   );
@@ -320,7 +340,7 @@ export function MultiplesPractice({
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
-          resetRun(selectedTable, isGamified);
+          resetRun(selectedTable, isGamified, isRandomMode);
         }
         return;
       }
@@ -383,7 +403,11 @@ export function MultiplesPractice({
           </button>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-950/60 border border-purple-500/40 text-purple-300 font-mono font-black text-xs sm:text-sm shadow-sm">
-            <span>Multiples of ×{selectedTable}</span>
+            {isRandomMode ? (
+              <span>🎲 All Factors • Current: ×{activeTable}</span>
+            ) : (
+              <span>Multiples of ×{activeTable}</span>
+            )}
           </div>
 
           {/* Gamify Speed Run Toggle Option */}
@@ -446,14 +470,37 @@ export function MultiplesPractice({
             Multiples Table:
           </span>
           <div className="flex items-center gap-1 sm:gap-1.5">
+            {/* Random Rotating All Factors Mode Button */}
+            <button
+              onClick={() => {
+                setIsRandomMode(true);
+                const randomTable = tables[Math.floor(Math.random() * tables.length)];
+                setSelectedTable(randomTable);
+                setActiveTable(randomTable);
+              }}
+              className={`px-3 py-1 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center gap-1 ${
+                isRandomMode
+                  ? "bg-gradient-to-r from-purple-500 via-indigo-500 to-pink-500 text-white shadow-md shadow-purple-500/30 scale-105 border border-purple-400"
+                  : "bg-white/5 hover:bg-white/10 text-white/70 border border-white/10"
+              }`}
+              title="Randomly rotate through all factors 2 through 9"
+            >
+              <span>🎲 All Factors (Random)</span>
+            </button>
+
             {tables.map((tbl) => {
               const tblRec = getMultiplesRecord(studentPin, tbl);
+              const isSelected = !isRandomMode && activeTable === tbl;
               return (
                 <button
                   key={tbl}
-                  onClick={() => setSelectedTable(tbl)}
+                  onClick={() => {
+                    setIsRandomMode(false);
+                    setSelectedTable(tbl);
+                    setActiveTable(tbl);
+                  }}
                   className={`px-2.5 py-1 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer relative ${
-                    selectedTable === tbl
+                    isSelected
                       ? "bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/30 scale-105 border border-cyan-400"
                       : "bg-white/5 hover:bg-white/10 text-white/70 border border-white/10"
                   }`}
@@ -472,7 +519,7 @@ export function MultiplesPractice({
 
         {/* Quick Restart Run */}
         <button
-          onClick={() => resetRun(selectedTable, isGamified)}
+          onClick={() => resetRun(selectedTable, isGamified, isRandomMode)}
           className="px-2.5 py-1 text-white/50 hover:text-white text-xs flex items-center gap-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer shrink-0"
           title="Restart Multiples Sequence"
         >
@@ -555,7 +602,7 @@ export function MultiplesPractice({
                     {ordinalSuffix}
                   </span>
                   <span className="text-[8px] font-mono text-cyan-400/80 mb-1">
-                    ({selectedTable}×{factorNum})
+                    ({activeTable}×{factorNum})
                   </span>
 
                   {/* Value / Input Box */}
@@ -636,7 +683,7 @@ export function MultiplesPractice({
 
               <div className="flex items-center gap-2 w-full pt-1">
                 <button
-                  onClick={() => resetRun(selectedTable, isGamified)}
+                  onClick={() => resetRun(selectedTable, isGamified, isRandomMode)}
                   className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-black font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-lg cursor-pointer transition-transform active:scale-95"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -660,7 +707,7 @@ export function MultiplesPractice({
               <span>
                 Enter multiple for:{" "}
                 <strong className="text-cyan-400 font-black">
-                  {selectedTable} × {activeBlankIndex + 1} = ?
+                  {activeTable} × {activeBlankIndex + 1} = ?
                 </strong>
               </span>
               <span className="text-[10px] text-white/40 font-mono">Max 2 digits</span>
