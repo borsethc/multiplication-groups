@@ -137,12 +137,12 @@ export function ScratchPad({
     : "min-h-[18px] md:min-h-[22px]";
 
   const arrayGapClass = is3Columns
-    ? "gap-x-1 sm:gap-x-2 md:gap-x-2.5 gap-y-1 sm:gap-y-1 md:gap-y-1.5"
+    ? "gap-x-1.5 sm:gap-x-2.5 md:gap-x-3 gap-y-2.5 sm:gap-y-3 md:gap-y-3.5"
     : isVeryLarge
-    ? "gap-x-1.5 sm:gap-x-2.5 md:gap-x-3 gap-y-1 sm:gap-y-1.5 md:gap-y-2"
+    ? "gap-x-2 sm:gap-x-3 md:gap-x-4 gap-y-2.5 sm:gap-y-3 md:gap-y-3.5"
     : isLarge
-    ? "gap-x-2 sm:gap-x-3 md:gap-x-4 gap-y-1.5 sm:gap-y-2 md:gap-y-2.5"
-    : "gap-x-3 sm:gap-x-4 md:gap-x-6 gap-y-2 sm:gap-y-3 md:gap-y-4";
+    ? "gap-x-2.5 sm:gap-x-3.5 md:gap-x-5 gap-y-3 sm:gap-y-3.5 md:gap-y-4"
+    : "gap-x-3 sm:gap-x-4 md:gap-x-6 gap-y-3 sm:gap-y-4 md:gap-y-5";
 
   const targetProduct = factorA * factorB;
   const totalTokensPlaced = lines.reduce((acc, l) => acc + l.tokens.length, 0);
@@ -476,6 +476,8 @@ export function ScratchPad({
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ type: "spring", stiffness: 450, damping: 30 }}
                       className={`relative flex flex-col items-center justify-center group select-none w-[var(--mobile-w)] md:w-[var(--tablet-w)] max-w-[calc(100vw-40px)] md:max-w-none ${
+                        currentStep >= 2 ? "pt-3.5 sm:pt-4" : ""
+                      } ${
                         currentStep === 2 && isCurrentActiveLine ? "ring-1 sm:ring-2 ring-cyan-400/40 rounded-xl p-0.5 bg-cyan-500/[0.04]" : ""
                       }`}
                       style={{
@@ -485,12 +487,12 @@ export function ScratchPad({
                     >
                       {/* Clear Group Label across Steps 2-5 */}
                       {currentStep >= 2 && (
-                        <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full border text-[8px] sm:text-[9px] font-black uppercase tracking-wider whitespace-nowrap z-20 pointer-events-none ${
+                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 px-2 py-0.2 rounded-full border text-[8px] sm:text-[9px] font-black uppercase tracking-wider whitespace-nowrap z-20 pointer-events-none ${
                           currentStep === 2 && isCurrentActiveLine
                             ? isPaper ? "bg-[#1e3a8a] text-white border-[#1e3a8a] shadow-sm animate-pulse" : "bg-cyan-500 text-black border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)] animate-pulse"
                             : isPaper ? "bg-white/90 text-[#1e3a8a] border-[#cbd5e1]" : "bg-black/80 text-white/70 border-white/15"
                         }`}>
-                          Group {groupIdx + 1}{currentStep > 2 ? ` (${factorB} ${factorB === 1 ? "dot" : "dots"})` : ""}
+                          Group {groupIdx + 1}
                         </div>
                       )}
 

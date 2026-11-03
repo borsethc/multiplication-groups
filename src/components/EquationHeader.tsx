@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Lightbulb, Lock } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 
 interface EquationHeaderProps {
   factorA: number; // Groups (Lines)
@@ -15,7 +15,6 @@ interface EquationHeaderProps {
   errorMessage?: string | null;
   isLinesComplete?: boolean;
   isTokensComplete?: boolean;
-  onOpenHint?: () => void;
   isBuildLocked?: boolean;
   isLargeFont?: boolean;
 }
@@ -31,7 +30,6 @@ export function EquationHeader({
   errorMessage,
   isLinesComplete = false,
   isTokensComplete = false,
-  onOpenHint,
   isBuildLocked = true,
   isLargeFont = false,
 }: EquationHeaderProps) {
@@ -162,10 +160,11 @@ export function EquationHeader({
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
+                maxLength={2}
                 value={isSolved ? product : typedAnswer}
                 disabled={isSolved}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, "");
+                  const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
                   onAnswerChange?.(val);
                 }}
                 placeholder="?"
@@ -189,21 +188,9 @@ export function EquationHeader({
             Answer
           </span>
         </div>
-
-        {/* Prominent Visible Hint Button */}
-        {onOpenHint && (
-          <button
-            onClick={onOpenHint}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition-all font-bold text-xs cursor-pointer shadow-sm self-center pb-2 ml-1"
-            title="View conceptual math hint"
-          >
-            <Lightbulb className="w-4 h-4 fill-current" />
-            <span className="hidden sm:inline">Hint</span>
-          </button>
-        )}
       </div>
 
-      {/* Subtle Error Message with Interactive Hint Link (Item 21) */}
+      {/* Subtle Error Message */}
       {errorMessage && (
         <motion.div
           initial={{ opacity: 0, y: -2 }}
@@ -211,14 +198,6 @@ export function EquationHeader({
           className="text-[11px] sm:text-xs text-rose-300 font-bold text-center mt-1 py-1 px-3 bg-rose-950/50 rounded-lg border border-rose-500/30 flex items-center justify-center gap-1.5 flex-wrap"
         >
           <span>{errorMessage}</span>
-          {onOpenHint && (
-            <button
-              onClick={onOpenHint}
-              className="underline text-amber-300 hover:text-white font-bold ml-1 cursor-pointer"
-            >
-              💡 Open Hint
-            </button>
-          )}
         </motion.div>
       )}
     </div>

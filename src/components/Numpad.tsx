@@ -20,9 +20,9 @@ export function Numpad({
 }: NumpadProps) {
   const handleDigit = (digit: string) => {
     if (disabled) return;
-    if (value.length >= 4) return;
+    if (value.length >= 2) return;
     onKeyPressSound?.();
-    onChange(value + digit);
+    onChange((value + digit).slice(0, 2));
   };
 
   const handleDelete = () => {

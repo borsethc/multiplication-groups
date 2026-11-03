@@ -740,7 +740,7 @@ export default function MultiplicationGroupsApp() {
       // WRONG ANSWER
       playIncorrect();
       setStreak(0);
-      setErrorMessage(`Not quite! You entered ${answerToCheck}. Check your groups or click 💡 Hint.`);
+      setErrorMessage(`Not quite! You entered ${answerToCheck}. Check your groups.`);
 
       // Add to re-drill queue for missed facts (Item 8)
       setSessionReDrillQueue((prev) => {
@@ -769,6 +769,20 @@ export default function MultiplicationGroupsApp() {
     }
   };
 
+  // SANITIZED 2-DIGIT ANSWER INPUT & AUTO-SUBMIT ON CORRECT SCORE (No button click needed!)
+  const handleAnswerInput = (rawVal: string) => {
+    const sanitized = rawVal.replace(/[^0-9]/g, "").slice(0, 2);
+    setErrorMessage(null);
+    setTypedAnswer(sanitized);
+
+    if (sanitized.length > 0) {
+      const parsed = parseInt(sanitized, 10);
+      if (parsed === targetProduct) {
+        handleSubmitAnswer(false, parsed);
+      }
+    }
+  };
+
   // MULTIPLE CHOICE IMMEDIATE 1-CLICK HANDLER: Auto-evaluates and auto-advances
   const handleMultipleChoiceClick = (opt: number) => {
     initAudio();
@@ -784,7 +798,7 @@ export default function MultiplicationGroupsApp() {
       playIncorrect();
       setEliminatedMcOptions((prev) => [...prev, opt]);
       setStreak(0);
-      setErrorMessage(`Eliminated ${opt}! It is not the correct product. Check the groups or click 💡 Hint.`);
+      setErrorMessage(`Eliminated ${opt}! It is not the correct product. Check your groups.`);
 
       // Add to session re-drill queue
       setSessionReDrillQueue((prev) => {
@@ -857,12 +871,13 @@ export default function MultiplicationGroupsApp() {
 
       if (/^[0-9]$/.test(e.key)) {
         playHover();
-        if (typedAnswer.length < 4 && !isSolved) {
-          setTypedAnswer((prev) => prev + e.key);
+        if (typedAnswer.length < 2 && !isSolved) {
+          handleAnswerInput(typedAnswer + e.key);
         }
       } else if (e.key === "Backspace") {
         playHover();
         if (!isSolved) {
+          setErrorMessage(null);
           setTypedAnswer((prev) => prev.slice(0, -1));
         }
       } else if (e.key === "Enter") {
@@ -1009,10 +1024,7 @@ export default function MultiplicationGroupsApp() {
               typedAnswer={typedAnswer}
               isSolved={isSolved}
               onOpenHelp={() => setIsInstructionsOpen(true)}
-              onAnswerChange={(val) => {
-                setErrorMessage(null);
-                setTypedAnswer(val);
-              }}
+              onAnswerChange={handleAnswerInput}
               onSubmitAnswer={() => handleSubmitAnswer(false)}
               errorMessage={errorMessage}
               isLinesComplete={lines.length === factorA || isSolved}
@@ -1022,10 +1034,6 @@ export default function MultiplicationGroupsApp() {
                   lines.every((l) => l.tokens.length === factorB)) ||
                 isSolved
               }
-              onOpenHint={() => {
-                setIsHintModalOpen(true);
-                setHasUsedHint(true);
-              }}
               isBuildLocked={isBuildFirstLocked}
               isLargeFont={accessibilitySettings.fontSize === "large"}
             />
@@ -1102,10 +1110,7 @@ export default function MultiplicationGroupsApp() {
                   )}
                   <Numpad
                     value={typedAnswer}
-                    onChange={(val) => {
-                      setErrorMessage(null);
-                      setTypedAnswer(val);
-                    }}
+                    onChange={handleAnswerInput}
                     onSubmit={() => handleSubmitAnswer(false)}
                     disabled={isSolved}
                     onKeyPressSound={playHover}
