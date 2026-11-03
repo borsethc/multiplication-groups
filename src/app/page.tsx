@@ -80,10 +80,10 @@ export default function MultiplicationGroupsApp() {
   const [dailySessions, setDailySessions] = useState<number>(0);
   const [currentSessionSolves, setCurrentSessionSolves] = useState<number>(0);
   const [tableMastery, setTableMastery] = useState<Record<number, number>>({
-    2: 0.4,
-    3: 0.3,
-    4: 0.2,
-    5: 0.1,
+    2: 0.0,
+    3: 0.0,
+    4: 0.0,
+    5: 0.0,
     6: 0.0,
     7: 0.0,
     8: 0.0,
@@ -157,9 +157,9 @@ export default function MultiplicationGroupsApp() {
         }
       }
 
-      // If no saved user, default to first student or "Amy" so new users land right on the Main Menu!
+      // If no saved user, default to first student or "Student" so new users land right on the Main Menu!
       if (!student) {
-        const defaultName = allStudents.length > 0 ? allStudents[0].name : "Amy";
+        const defaultName = allStudents.length > 0 ? allStudents[0].name : "Student";
         const result = loginOrCreateStudent(defaultName);
         if (result.student && !result.requiresPin) {
           student = result.student;
@@ -930,7 +930,7 @@ export default function MultiplicationGroupsApp() {
         <StudentLogin
           onLogin={handleLogin}
           onBackToMenu={() => {
-            const result = loginOrCreateStudent("Amy");
+            const result = loginOrCreateStudent("Student");
             if (result.student) setActiveStudent(result.student);
             setIsLoggedIn(true);
             setCurrentView("dashboard");

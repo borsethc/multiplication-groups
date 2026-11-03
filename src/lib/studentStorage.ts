@@ -34,8 +34,8 @@ export interface StudentProfile {
 
 export const TEACHER_PIN = "9999";
 
-const STORAGE_KEY = "chadmath_classroom_students";
-const ACTIVE_PIN_KEY = "chadmath_active_student_pin";
+const STORAGE_KEY = "chadmath_classroom_students_v3";
+const ACTIVE_PIN_KEY = "chadmath_active_student_pin_v3";
 
 // Students are created when a user first enters their username
 const DEFAULT_STUDENTS: StudentProfile[] = [];
@@ -54,7 +54,7 @@ export function loadAllStudents(): StudentProfile[] {
         .filter(
           (s) =>
             !["student-1", "student-2", "student-3", "student-4"].includes(s.id) &&
-            !["Emma Watson", "Liam Chen", "Sophia Rodriguez", "Jackson Davis"].includes(s.name)
+            !["Emma Watson", "Liam Chen", "Sophia Rodriguez", "Jackson Davis", "Amy", "Chad"].includes(s.name)
         )
         .map((s) => ({
           ...s,
